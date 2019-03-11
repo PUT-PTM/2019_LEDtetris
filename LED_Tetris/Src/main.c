@@ -41,7 +41,8 @@
 #include "stm32f4xx_hal.h"
 
 /* USER CODE BEGIN Includes */
-
+#define false (_Bool)0
+#define true (_Bool)1
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -57,10 +58,89 @@ TIM_HandleTypeDef htim4;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
+// ADC1 --> przyciski do sterowania gra
+// DAC --> muzyka przez glosnik
+// SPI1 --> LED matrix
+// SPI2 --> muzyka
+// TIM3 --> odtwarzenie muzyki
+// TIM4 --> czestotliwosc gry
+
+enum ksztalty {ELKA = 1, ELKA_Odwrot, SCHODEK, SCHODEK_Odwrot, KWADRAT, KRESKA};
+
+_Bool mainTable[18][10] = {0}; //18 rows, 10 cols
+
+_Bool _Kreska[4][4][4] = {
+		{
+			{0,0,1,0},
+			{0,0,1,0},
+			{0,0,1,0},
+			{0,0,1,0}
+		},
+		{
+			{0,0,0,0},
+			{0,0,0,0},
+			{0,0,0,0},
+			{1,1,1,1}
+		},
+		{
+			{0,0,1,0},
+			{0,0,1,0},
+			{0,0,1,0},
+			{0,0,1,0}
+		},
+		{
+			{0,0,0,0},
+			{0,0,0,0},
+			{0,0,0,0},
+			{1,1,1,1}
+		},
+};
+
 
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
+
+/*  +-+-+-+-+-+-+-+-+-+-+
+ *  |X| | | | | | | | |X|
+ *  +-+-+-+-+-+-+-+-+-+-+
+ *  |X| | | | | | | | |X|
+ *  +-+-+-+-+-+-+-+-+-+-+
+ *  |X| | | | | | | | |X|
+ *  +-+-+-+-+-+-+-+-+-+-+
+ *  |X| | | | | | | | |X|
+ *  +-+-+-+-+-+-+-+-+-+-+
+ *  |X| | | | | | | | |X|
+ *  +-+-+-+-+-+-+-+-+-+-+
+ *  |X| | | | | | | | |X|
+ *  +-+-+-+-+-+-+-+-+-+-+
+ *  |X| | | | | | | | |X|
+ *  +-+-+-+-+-+-+-+-+-+-+
+ *  |X| | | | | | | | |X|
+ *  +-+-+-+-+-+-+-+-+-+-+
+ *  |X| | | | | | | | |X|
+ *  +-+-+-+-+-+-+-+-+-+-+
+ *  |X| | | | | | | | |X|
+ *  +-+-+-+-+-+-+-+-+-+-+
+ *  |X| | | | | | | | |X|
+ *  +-+-+-+-+-+-+-+-+-+-+
+ *  |X| | | | | | | | |X|
+ *  +-+-+-+-+-+-+-+-+-+-+
+ *  |X| | | | | | | | |X|
+ *  +-+-+-+-+-+-+-+-+-+-+
+ *  |X| | | | | | | | |X|
+ *  +-+-+-+-+-+-+-+-+-+-+
+ *  |X| | | | | | | | |X|
+ *  +-+-+-+-+-+-+-+-+-+-+
+ *  |X| | | | | | | | |X|
+ *  +-+-+-+-+-+-+-+-+-+-+
+ *  |X| | | | | | | | |X|
+ *  +-+-+-+-+-+-+-+-+-+-+
+ *  |X|X|X|X|X|X|X|X|X|X|
+ *  +-+-+-+-+-+-+-+-+-+-+
+ */
+
+
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_TIM4_Init(void);
@@ -69,6 +149,44 @@ static void MX_SPI2_Init(void);
 static void MX_DAC_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_ADC1_Init(void);
+
+void initMainTable()
+{
+	for(int i=0;i < 18;i++)
+	{
+		mainTable[i][0] = true;
+		mainTable[i][9] = true;
+	}
+	for(int j=1;j<9;j++)
+	{
+		mainTable[17][j] = true;
+	}
+}
+
+uint8_t valueOfRow(int row)
+{
+	uint8_t suma = 0x00;
+	int tmp = 0x01;
+	for(int i=1;i<9;i++)
+	{
+		if(mainTable[row][i] == true)
+		{
+			suma += tmp;
+		}
+		tmp = tmp << 1;
+	}
+	return suma;
+}
+
+void writeLedByte()
+{
+
+}
+
+void initLED()
+{
+	HAL_SPI_Transmit(hspi1,0x00,1,NULL);
+}
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
@@ -263,7 +381,7 @@ static void MX_SPI1_Init(void)
   hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi1.Init.NSS = SPI_NSS_SOFT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_64;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
