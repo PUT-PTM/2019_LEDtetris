@@ -1,7 +1,7 @@
 # 2019_LEDtetris
 
 ## Overview
-Project of classic game - Tetris. Screen is made from LED matrix, sterring with buttons. Added "Corobeiniki" song and score on 7-segment screen.
+Project of classic game - Tetris. Screen is made from LED matrix, sterring with buttons. Added "Korobeiniki" song and score on 7-segment screen.
 
 ## Description
 Application on STM32 (project compiled and run on STM32F407G). 
