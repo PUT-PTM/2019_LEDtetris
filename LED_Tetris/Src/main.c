@@ -339,7 +339,7 @@ uint8_t valueOfRow(int row)
 {
 	uint8_t suma = 0x00;
 	int tmp = 0x01;
-	for(int i=1;i<9;i++)
+	for(int i=8;i>0;i--)
 	{
 		if(mainTable[row][i] == true)
 		{
