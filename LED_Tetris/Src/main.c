@@ -43,8 +43,7 @@
 /* USER CODE BEGIN Includes */
 #define false 0
 #define true 1
-int score = 0;
-char gameOn = true;
+
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -60,29 +59,19 @@ TIM_HandleTypeDef htim4;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-// ADC1 --> przyciski do sterowania gra
-// DAC --> muzyka przez glosnik
+// ADC1 --> buttons for sterring
+// DAC  --> music through the speaker
 // SPI1 --> LED matrix
-// SPI2 --> muzyka
-// TIM3 --> odtwarzenie muzyki
-// TIM4 --> czestotliwosc gry
+// SPI2 --> music
+// TIM3 --> play music
+// TIM4 --> frequency of game
 
 _Bool mainTable[18][10] = {0}; //18 rows, 10 columns
+uint16_t score = 0;
+_Bool gameOn = true;
 
 //T
 _Bool shapeT[4][4][4] = {
-		{
-			{0,0,0,0},
-			{0,1,1,1},
-			{0,0,1,0},
-			{0,0,0,0}
-		},
-		{
-			{0,0,1,0},
-			{0,1,1,0},
-			{0,0,1,0},
-			{0,0,0,0}
-		},
 		{
 			{0,0,1,0},
 			{0,1,1,1},
@@ -92,6 +81,18 @@ _Bool shapeT[4][4][4] = {
 		{
 			{0,0,1,0},
 			{0,0,1,1},
+			{0,0,1,0},
+			{0,0,0,0}
+		},
+		{
+			{0,0,0,0},
+			{0,1,1,1},
+			{0,0,1,0},
+			{0,0,0,0}
+		},
+		{
+			{0,0,1,0},
+			{0,1,1,0},
 			{0,0,1,0},
 			{0,0,0,0}
 		},
@@ -129,21 +130,22 @@ _Bool shapeO[4][4][4] = {
 _Bool shapeI[4][4][4] = {
 		{
 			{0,0,0,0},
-			{1,1,1,1},
 			{0,0,0,0},
+			{1,1,1,1},
 			{0,0,0,0}
 		},
 		{
-			{0,1,0,0},
-			{0,1,0,0},
-			{0,1,0,0},
-			{0,1,0,0}
+			{0,0,1,0},
+			{0,0,1,0},
+			{0,0,1,0},
+			{0,0,1,0}
 		},
 		{
 			{0,0,0,0},
 			{1,1,1,1},
 			{0,0,0,0},
 			{0,0,0,0}
+
 		},
 		{
 			{0,1,0,0},
@@ -156,9 +158,9 @@ _Bool shapeI[4][4][4] = {
 //L
 _Bool shapeL[4][4][4] = {
 		{
-			{0,0,0,0},
+			{0,0,0,1},
 			{0,1,1,1},
-			{0,1,0,0},
+			{0,0,0,0},
 			{0,0,0,0}
 		},
 		{
@@ -168,9 +170,9 @@ _Bool shapeL[4][4][4] = {
 			{0,0,0,0}
 		},
 		{
-			{0,0,0,1},
-			{0,1,1,1},
 			{0,0,0,0},
+			{0,1,1,1},
+			{0,1,0,0},
 			{0,0,0,0}
 		},
 		{
@@ -184,18 +186,6 @@ _Bool shapeL[4][4][4] = {
 //J
 _Bool shapeJ[4][4][4] = {
 		{
-			{0,0,0,0},
-			{0,1,1,1},
-			{0,0,0,1},
-			{0,0,0,0}
-		},
-		{
-			{0,0,1,0},
-			{0,0,1,0},
-			{0,1,1,0},
-			{0,0,0,0}
-		},
-		{
 			{0,1,0,0},
 			{0,1,1,1},
 			{0,0,0,0},
@@ -205,6 +195,18 @@ _Bool shapeJ[4][4][4] = {
 			{0,0,1,1},
 			{0,0,1,0},
 			{0,0,1,0},
+			{0,0,0,0}
+		},
+		{
+			{0,0,0,0},
+			{0,1,1,1},
+			{0,0,0,1},
+			{0,0,0,0}
+		},
+		{
+			{0,0,1,0},
+			{0,0,1,0},
+			{0,1,1,0},
 			{0,0,0,0}
 		},
 };
@@ -230,9 +232,9 @@ _Bool shapeS[4][4][4] = {
 			{0,0,0,0}
 		},
 		{
+			{0,1,0,0},
+			{0,1,1,0},
 			{0,0,1,0},
-			{0,0,1,1},
-			{0,0,0,1},
 			{0,0,0,0}
 		},
 };
@@ -258,9 +260,9 @@ _Bool shapeZ[4][4][4] = {
 			{0,0,0,0}
 		},
 		{
-			{0,0,0,1},
-			{0,0,1,1},
 			{0,0,1,0},
+			{0,1,1,0},
+			{0,1,0,0},
 			{0,0,0,0}
 		},
 };
@@ -270,7 +272,8 @@ _Bool shapeZ[4][4][4] = {
 
 /* Private function prototypes -----------------------------------------------*/
 
-/*  +-+-+-+-+-+-+-+-+-+-+
+/*  Main table shape
+ *  +-+-+-+-+-+-+-+-+-+-+
  *  |X| | | | | | | | |X|
  *  +-+-+-+-+-+-+-+-+-+-+
  *  |X| | | | | | | | |X|
@@ -347,14 +350,21 @@ uint8_t valueOfRow(int row)
 	return suma;
 }
 
-void writeLedByte()
+void writeLedByte(uint8_t addr1, uint8_t data1, uint8_t addr2, uint8_t,data2)
 {
-
+	HAL_SPI_Transmit(hspi1,addr1,1,HAL_MAX_DELAY);
+	HAL_SPI_Transmit(hspi1,data1,1,HAL_MAX_DELAY);
+	HAL_SPI_Transmit(hspi1,addr2,1,HAL_MAX_DELAY);
+	HAL_SPI_Transmit(hspi1,data2,1,HAL_MAX_DELAY);
 }
 
 void initLED()
 {
-
+	writeLedByte(0x09,0x00,0x09,0x00); // no Decode-Mode
+	writeLedByte(0x0a,0x03,0x0a,0x03); // Intensity of light: here 1/4
+	writeLedByte(0x0b,0x07,0x0b,0x07); // Scan-Limit: all digits
+	writeLedByte(0x0c,0x01,0x0c,0x01); // Shutdown: Normal Operation
+	writeLedByte(0x0f,0x00,0x0f,0x00); // Display text: nothing
 }
 
 /* USER CODE BEGIN PFP */
