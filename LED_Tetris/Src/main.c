@@ -68,9 +68,11 @@ TIM_HandleTypeDef htim4;
 // TIM3 --> play music
 // TIM4 --> frequency of game
 
-_Bool mainTable[18][10] = {0}; //18 rows, 10 columns
-uint16_t score = 0;
+_Bool mainTable[18][10] = { false }; //18 rows, 10 columns
 _Bool gameOn = true;
+_Bool state = false;
+uint16_t score = 0;
+uint16_t value;
 
 
 //T --> nr 0
@@ -425,6 +427,119 @@ void Finish()
 
 }
 
+//Obrot ksztaltu
+void rotate()
+{
+
+}
+
+//Przesuniecie w lewo
+void goLeft()
+{
+
+}
+
+//Przesuniecie w prawo
+void goRight()
+{
+
+}
+
+//Zjedz w dol
+void goDown()
+{
+
+}
+
+//Graj i zatrzymaj
+void Play_Pause()
+{
+
+}
+
+//Musi byæ w while
+void buttonPressedAction()
+{
+	HAL_ADC_Start(&hadc1);
+
+	if (HAL_ADC_PollForConversion(&hadc1, 10) == HAL_OK)
+	{
+		value = HAL_ADC_GetValue(&hadc1);
+	}
+
+	if (value < 4050)
+	{
+		HAL_Delay(1);
+
+		HAL_ADC_Start(&hadc1);
+
+		if (HAL_ADC_PollForConversion(&hadc1, 10) == HAL_OK)
+		{
+			value = HAL_ADC_GetValue(&hadc1);
+		}
+
+		if (value < 2300 && value > 2250)
+		{
+			if (state == false)
+			{
+				//pressedKey = 5
+				Play_Pause();
+				state = true;
+			}
+		}
+
+		else if (value < 1120 && value >= 1050)
+		{
+			if (state == false)
+			{
+				//pressedKey = 4
+				goRight();
+				state = true;
+			}
+		}
+
+		else if (value < 600 && value >540)
+		{
+			if (state == false)
+			{
+				//pressedKey = 3
+				goDown();
+				state = true;
+			}
+		}
+
+		else if (value < 250 && value > 180)
+		{
+			if (state == false)
+			{
+				//pressedKey = 2
+				rotate();
+				state = true;
+			}
+		}
+
+		else if (value < 50)
+		{
+			if (state == false)
+			{
+				//pressedKey = 1
+				goLeft();
+				state = true;
+			}
+		}
+		// Czy ten else pod spodem jest w ogole potrzebny??????????
+		else
+		{
+			if (state == true)
+			{
+				//pressedKey = 0
+
+				state = false;
+			}
+			HAL_Delay(1);
+		}
+	}
+}
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
