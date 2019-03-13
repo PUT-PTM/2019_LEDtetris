@@ -41,6 +41,8 @@
 #include "stm32f4xx_hal.h"
 
 /* USER CODE BEGIN Includes */
+#include <stdlib.h>
+
 #define false 0
 #define true 1
 
@@ -70,7 +72,8 @@ _Bool mainTable[18][10] = {0}; //18 rows, 10 columns
 uint16_t score = 0;
 _Bool gameOn = true;
 
-//T
+
+//T --> nr 0
 _Bool shapeT[4][4][4] = {
 		{
 			{0,0,1,0},
@@ -98,7 +101,7 @@ _Bool shapeT[4][4][4] = {
 		},
 };
 
-//O
+//O --> nr 1
 _Bool shapeO[4][4][4] = {
 		{
 			{0,0,0,0},
@@ -126,7 +129,7 @@ _Bool shapeO[4][4][4] = {
 		},
 };
 
-//I
+//I --> nr 2
 _Bool shapeI[4][4][4] = {
 		{
 			{0,0,0,0},
@@ -155,7 +158,7 @@ _Bool shapeI[4][4][4] = {
 		},
 };
 
-//L
+//L --> nr 3
 _Bool shapeL[4][4][4] = {
 		{
 			{0,0,0,1},
@@ -183,7 +186,7 @@ _Bool shapeL[4][4][4] = {
 		},
 };
 
-//J
+//J --> nr 4
 _Bool shapeJ[4][4][4] = {
 		{
 			{0,1,0,0},
@@ -211,7 +214,7 @@ _Bool shapeJ[4][4][4] = {
 		},
 };
 
-//S
+//S --> nr 5
 _Bool shapeS[4][4][4] = {
 		{
 			{0,0,0,0},
@@ -239,7 +242,7 @@ _Bool shapeS[4][4][4] = {
 		},
 };
 
-//Z
+//Z --> nr 6
 _Bool shapeZ[4][4][4] = {
 		{
 			{0,0,0,0},
@@ -322,6 +325,14 @@ static void MX_DAC_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_ADC1_Init(void);
 
+// -------------< Timers, Spi, DAC, ADC functions >--------------
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+
+
+
+}
+
+// ----------------------<Game functions>------------------------
 void initMainTable()
 {
 	for(int i=0; i<18; i++)
@@ -334,7 +345,6 @@ void initMainTable()
 		mainTable[17][j] = true;
 	}
 }
-
 uint8_t valueOfRow(int row)
 {
 	uint8_t suma = 0x00;
@@ -349,15 +359,13 @@ uint8_t valueOfRow(int row)
 	}
 	return suma;
 }
-
-void writeLedByte(uint8_t addr1, uint8_t data1, uint8_t addr2, uint8_t,data2)
+void writeLedByte(uint8_t addr1, uint8_t data1, uint8_t addr2, uint8_t data2)
 {
 	HAL_SPI_Transmit(hspi1,addr1,1,HAL_MAX_DELAY);
 	HAL_SPI_Transmit(hspi1,data1,1,HAL_MAX_DELAY);
 	HAL_SPI_Transmit(hspi1,addr2,1,HAL_MAX_DELAY);
 	HAL_SPI_Transmit(hspi1,data2,1,HAL_MAX_DELAY);
 }
-
 void initLED()
 {
 	writeLedByte(0x09,0x00,0x09,0x00); // no Decode-Mode
@@ -366,6 +374,57 @@ void initLED()
 	writeLedByte(0x0c,0x01,0x0c,0x01); // Shutdown: Normal Operation
 	writeLedByte(0x0f,0x00,0x0f,0x00); // Display text: nothing
 }
+
+_Bool ANDMatrix(int8_t row, int8_t col)
+{
+	for(int8_t i = row;i < row + 4; i++)
+	{
+		for(int8_t j = col; j < col + 4;j++)
+		{
+			if(i < 0 || i > 9) continue;
+			if(j < 0 || j > 9) continue;
+			if(mainTable[i][j] & 1 == 1) return false;
+		}
+	}
+	return true;
+}
+
+void movePiece(int direction)
+{
+
+}
+
+void putShape(int8_t row, int8_t col)
+{
+	for(int8_t i = row;i < row + 4;i++)
+	{
+		for(int8_t j = col; j < col + 4; j++)
+		{
+
+		}
+	}
+}
+
+void placeNew()
+{
+	uint8_t shape = rand()%7;
+	switch(shape)
+	{
+	case 0:
+	case 1:
+	case 2:
+	case 3:
+	case 4:
+	case 5:
+	case 6:
+	}
+}
+
+void Finish()
+{
+
+}
+
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
@@ -412,7 +471,10 @@ int main(void)
   MX_SPI1_Init();
   MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
+  HAL_TIM_Base_Start_IT(htim3);
+  HAL_TIM_Base_Start_IT(htim4);
 
+  srand(time(NULL));
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -423,7 +485,7 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
-
+  HAL_Delay(1);
   }
   /* USER CODE END 3 */
 
