@@ -42,6 +42,7 @@
 
 /* USER CODE BEGIN Includes */
 #include <stdlib.h>
+#include "display_lib.h"
 
 #define false 0
 #define true 1
@@ -56,6 +57,7 @@ DAC_HandleTypeDef hdac;
 SPI_HandleTypeDef hspi1;
 SPI_HandleTypeDef hspi2;
 
+TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim4;
 
@@ -65,15 +67,24 @@ TIM_HandleTypeDef htim4;
 // DAC  --> music through the speaker
 // SPI1 --> LED matrix
 // SPI2 --> music
-// TIM3 --> play music
-// TIM4 --> frequency of game
+// TIM2 --> 7-segment display [400 Hz]
+// TIM3 --> play music [8000 Hz]
+// TIM4 --> frequency of game [10Hz]
 
 _Bool mainTable[18][10] = { false }; //18 rows, 10 columns
-_Bool gameOn = true;
-_Bool state = false;
-uint16_t score = 0;
-uint16_t value;
 
+_Bool gameOn = true; // is game paused or not
+_Bool state = false; //state of pressed button
+uint16_t gameScore = 0; //score of game
+
+uint16_t ADCvalue; //value of pressed button
+
+uint8_t scoreDisplayNum = 1; //num of 7-segment display (1,2,3 or 4)
+
+uint8_t currX = 1; //current position of the piece
+uint8_t currY = 5;
+uint8_t currShape = 0; //num of current shape (numbers shown below)
+uint8_t currShapePhase = 0; // which rotation phase
 
 //T --> nr 0
 _Bool shapeT[4][4][4] = {
@@ -276,7 +287,22 @@ _Bool shapeZ[4][4][4] = {
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
+void SystemClock_Config(void);
+static void MX_GPIO_Init(void);
+static void MX_TIM4_Init(void);
+static void MX_TIM3_Init(void);
+static void MX_SPI2_Init(void);
+static void MX_DAC_Init(void);
+static void MX_SPI1_Init(void);
+static void MX_ADC1_Init(void);
+static void MX_TIM2_Init(void);
 
+/* USER CODE BEGIN PFP */
+/* Private function prototypes -----------------------------------------------*/
+
+/* USER CODE END PFP */
+
+/* USER CODE BEGIN 0 */
 /*  Main table shape
  *  +-+-+-+-+-+-+-+-+-+-+
  *  |X| | | | | | | | |X|
@@ -317,18 +343,47 @@ _Bool shapeZ[4][4][4] = {
  *  +-+-+-+-+-+-+-+-+-+-+
  */
 
-
-void SystemClock_Config(void);
-static void MX_GPIO_Init(void);
-static void MX_TIM4_Init(void);
-static void MX_TIM3_Init(void);
-static void MX_SPI2_Init(void);
-static void MX_DAC_Init(void);
-static void MX_SPI1_Init(void);
-static void MX_ADC1_Init(void);
-
 // -------------< Timers, Spi, DAC, ADC functions >--------------
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+
+	if(htim->Instance == TIM2)
+    {
+		DISP_VAL_NULL;
+		switch(scoreDisplayNum)
+		{
+		case 1:
+		{
+			displayValue(1,(gameScore/1000));
+			DISP_DOT;
+		}break;
+		case 2:
+		{
+			displayValue(2,(gameScore/100)%10);
+		}break;
+		case 3:
+		{
+			displayValue(3,(gameScore/10)%10);
+			DISP_DOT;
+		}break;
+		case 4:
+		{
+			displayValue(4,gameScore%10);
+			scoreDisplayNum = 0;
+		};break;
+	  };
+		++scoreDisplayNum;
+	}
+
+	if(htim->Instance == TIM3)
+	{
+		//kod do wykonania w momencie przepelnienia timera
+	}
+
+	if(htim->Instance == TIM4)
+	{
+		//kod do wykonania w momencie przepelnienia timera
+	}
+
 
 
 
@@ -391,42 +446,6 @@ _Bool ANDMatrix(int8_t row, int8_t col)
 	return true;
 }
 
-void movePiece(int direction)
-{
-
-}
-
-void putShape(int8_t row, int8_t col)
-{
-	for(int8_t i = row;i < row + 4;i++)
-	{
-		for(int8_t j = col; j < col + 4; j++)
-		{
-
-		}
-	}
-}
-
-void placeNew()
-{
-	uint8_t shape = rand()%7;
-	switch(shape)
-	{
-	case 0:
-	case 1:
-	case 2:
-	case 3:
-	case 4:
-	case 5:
-	case 6:
-	}
-}
-
-void Finish()
-{
-
-}
-
 //Obrot ksztaltu
 void rotate()
 {
@@ -451,23 +470,77 @@ void goDown()
 
 }
 
-//Graj i zatrzymaj
+//play/pause
 void Play_Pause()
+{
+	gameOn ^= 1;
+}
+
+void movePiece(int direction)
+{
+	switch(direction)
+	{
+	case 1: goLeft();break;
+	case 2: rotate();break;
+	case 3: goDown();break;
+	case 4: goRight();break;
+	case 5: Play_Pause();break;
+	default:break;
+	}
+}
+
+void putShape(int8_t row, int8_t col)
+{
+	for(int8_t i = row;i < row + 4;i++)
+	{
+		for(int8_t j = col; j < col + 4; j++)
+		{
+
+		}
+	}
+}
+
+
+void placeNew()
+{
+	uint8_t shape = rand()%7;
+	switch(shape)
+	{
+	case 0:
+	case 1:
+	case 2:
+	case 3:
+	case 4:
+	case 5:
+	case 6:
+	}
+}
+
+deleteRow(uint8_t nr)
+{
+	for(int i=1;i<9;i++)
+	{
+		mainTable[nr][i] = 0;
+	}
+}
+
+void Finish()
 {
 
 }
 
-//Musi byæ w while
+
+//Must be in while loop
 void buttonPressedAction()
 {
 	HAL_ADC_Start(&hadc1);
 
 	if (HAL_ADC_PollForConversion(&hadc1, 10) == HAL_OK)
 	{
-		value = HAL_ADC_GetValue(&hadc1);
+		ADCvalue = HAL_ADC_GetValue(&hadc1);
 	}
 
-	if (value < 4050)
+	if (ADCvalue < 4050)
 	{
 		HAL_Delay(1);
 
@@ -475,10 +548,10 @@ void buttonPressedAction()
 
 		if (HAL_ADC_PollForConversion(&hadc1, 10) == HAL_OK)
 		{
-			value = HAL_ADC_GetValue(&hadc1);
+			ADCvalue = HAL_ADC_GetValue(&hadc1);
 		}
 
-		if (value < 2300 && value > 2250)
+		if (ADCvalue < 2300 && ADCvalue > 2250)
 		{
 			if (state == false)
 			{
@@ -488,7 +561,7 @@ void buttonPressedAction()
 			}
 		}
 
-		else if (value < 1120 && value >= 1050)
+		else if (ADCvalue < 1120 && ADCvalue >= 1050)
 		{
 			if (state == false)
 			{
@@ -498,7 +571,7 @@ void buttonPressedAction()
 			}
 		}
 
-		else if (value < 600 && value >540)
+		else if (ADCvalue < 600 && ADCvalue >540)
 		{
 			if (state == false)
 			{
@@ -508,7 +581,7 @@ void buttonPressedAction()
 			}
 		}
 
-		else if (value < 250 && value > 180)
+		else if (ADCvalue < 250 && ADCvalue > 180)
 		{
 			if (state == false)
 			{
@@ -518,7 +591,7 @@ void buttonPressedAction()
 			}
 		}
 
-		else if (value < 50)
+		else if (ADCvalue < 50)
 		{
 			if (state == false)
 			{
@@ -528,25 +601,18 @@ void buttonPressedAction()
 			}
 		}
 		// Czy ten else pod spodem jest w ogole potrzebny??????????
+		}
 		else
 		{
 			if (state == true)
 			{
 				//pressedKey = 0
-
 				state = false;
 			}
 			HAL_Delay(1);
 		}
-	}
 }
 
-/* USER CODE BEGIN PFP */
-/* Private function prototypes -----------------------------------------------*/
-
-/* USER CODE END PFP */
-
-/* USER CODE BEGIN 0 */
 
 /* USER CODE END 0 */
 
@@ -585,7 +651,9 @@ int main(void)
   MX_DAC_Init();
   MX_SPI1_Init();
   MX_ADC1_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
+  HAL_TIM_Base_Start_IT(htim2);
   HAL_TIM_Base_Start_IT(htim3);
   HAL_TIM_Base_Start_IT(htim4);
 
@@ -601,6 +669,7 @@ int main(void)
 
   /* USER CODE BEGIN 3 */
   HAL_Delay(1);
+  ButtonPressedAction();
   }
   /* USER CODE END 3 */
 
@@ -737,7 +806,7 @@ static void MX_SPI1_Init(void)
   hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi1.Init.NSS = SPI_NSS_SOFT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_64;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -767,6 +836,38 @@ static void MX_SPI2_Init(void)
   hspi2.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
   hspi2.Init.CRCPolynomial = 10;
   if (HAL_SPI_Init(&hspi2) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+}
+
+/* TIM2 init function */
+static void MX_TIM2_Init(void)
+{
+
+  TIM_ClockConfigTypeDef sClockSourceConfig;
+  TIM_MasterConfigTypeDef sMasterConfig;
+
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 209;
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 999;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
   }
@@ -813,7 +914,7 @@ static void MX_TIM4_Init(void)
   TIM_MasterConfigTypeDef sMasterConfig;
 
   htim4.Instance = TIM4;
-  htim4.Init.Prescaler = 8399;
+  htim4.Init.Prescaler = 839;
   htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim4.Init.Period = 9999;
   htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
