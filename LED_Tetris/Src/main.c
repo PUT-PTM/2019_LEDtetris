@@ -43,6 +43,7 @@
 /* USER CODE BEGIN Includes */
 #include <stdlib.h>
 #include "display_lib.h"
+#include <time.h>
 
 #define false 0
 #define true 1
@@ -75,16 +76,16 @@ _Bool mainTable[18][10] = { false }; //18 rows, 10 columns
 
 _Bool gameOn = true; // is game paused or not
 _Bool state = false; //state of pressed button
-uint16_t gameScore = 0; //score of game
+volatile uint16_t gameScore = 0; //score of game
 
 uint16_t ADCvalue; //value of pressed button
 
 uint8_t scoreDisplayNum = 1; //num of 7-segment display (1,2,3 or 4)
 
-uint8_t currX = 1; //current position of the piece
-uint8_t currY = 5;
-uint8_t currShape = 0; //num of current shape (numbers shown below)
-uint8_t currShapePhase = 0; // which rotation phase
+volatile uint8_t currX = 1; //current position of the piece
+volatile uint8_t currY = 5;
+volatile uint8_t currShape = 0; //num of current shape (numbers shown below)
+volatile uint8_t currShapePhase = 0; // which rotation phase
 
 //T --> nr 0
 _Bool shapeT[4][4][4] = {
@@ -305,7 +306,7 @@ static void MX_TIM2_Init(void);
 /* USER CODE BEGIN 0 */
 /*  Main table shape
  *  +-+-+-+-+-+-+-+-+-+-+
- *  |X| | | | | | | | |X|
+ *  |X| | | | | | | | |X| //no usage
  *  +-+-+-+-+-+-+-+-+-+-+
  *  |X| | | | | | | | |X|
  *  +-+-+-+-+-+-+-+-+-+-+
@@ -384,9 +385,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 		//kod do wykonania w momencie przepelnienia timera
 	}
 
-
-
-
 }
 
 // ----------------------<Game functions>------------------------
@@ -418,18 +416,27 @@ uint8_t valueOfRow(int row)
 }
 void writeLedByte(uint8_t addr1, uint8_t data1, uint8_t addr2, uint8_t data2)
 {
-	HAL_SPI_Transmit(hspi1,addr1,1,HAL_MAX_DELAY);
-	HAL_SPI_Transmit(hspi1,data1,1,HAL_MAX_DELAY);
-	HAL_SPI_Transmit(hspi1,addr2,1,HAL_MAX_DELAY);
-	HAL_SPI_Transmit(hspi1,data2,1,HAL_MAX_DELAY);
+	if(!HAL_SPI_Transmit(&hspi1,&addr1,1,HAL_MAX_DELAY)) gameScore++;
+	if(!HAL_SPI_Transmit(&hspi1,&data1,1,HAL_MAX_DELAY)) gameScore++;
+	if(!HAL_SPI_Transmit(&hspi1,&addr2,1,HAL_MAX_DELAY)) gameScore++;
+	if(!HAL_SPI_Transmit(&hspi1,&data2,1,HAL_MAX_DELAY)) gameScore++;
+
 }
 void initLED()
 {
-	writeLedByte(0x09,0x00,0x09,0x00); // no Decode-Mode
-	writeLedByte(0x0a,0x03,0x0a,0x03); // Intensity of light: here 1/4
+	writeLedByte(0x0f,0x01,0x0f,0x01); // Display text: all //for test
+	HAL_Delay(500);
 	writeLedByte(0x0b,0x07,0x0b,0x07); // Scan-Limit: all digits
 	writeLedByte(0x0c,0x01,0x0c,0x01); // Shutdown: Normal Operation
+	writeLedByte(0x09,0x00,0x09,0x00); // no Decode-Mode
+	writeLedByte(0x0a,0x05,0x0a,0x05); // Intensity of light: here 1/4
 	writeLedByte(0x0f,0x00,0x0f,0x00); // Display text: nothing
+
+
+	//writeLedByte(0x0f,0x00,0x0f,0x00); // Display text: nothing
+
+	writeLedByte(0x01,0xff,0x01,0xff); // Line 1
+	writeLedByte(0x02,0xff,0x02,0xff); // Line 2
 }
 
 _Bool ANDMatrix(int8_t row, int8_t col)
@@ -440,10 +447,18 @@ _Bool ANDMatrix(int8_t row, int8_t col)
 		{
 			if(i < 0 || i > 9) continue;
 			if(j < 0 || j > 9) continue;
-			if(mainTable[i][j] & 1 == 1) return false;
+			if(mainTable[i][j] == 1 && 1 == 1) return false;
 		}
 	}
 	return true;
+}
+
+void writeLedMatrix()
+{
+	for(int i=1;i<9;i++)
+	{
+		writeLedByte(i,valueOfRow(i),i,valueOfRow(i+8));
+	}
 }
 
 //Obrot ksztaltu
@@ -503,6 +518,7 @@ void putShape(int8_t row, int8_t col)
 
 void placeNew()
 {
+	/*
 	uint8_t shape = rand()%7;
 	switch(shape)
 	{
@@ -514,9 +530,10 @@ void placeNew()
 	case 5:
 	case 6:
 	}
+	*/
 }
 
-deleteRow(uint8_t nr)
+void deleteRow(uint8_t nr)
 {
 	for(int i=1;i<9;i++)
 	{
@@ -653,10 +670,14 @@ int main(void)
   MX_ADC1_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-  HAL_TIM_Base_Start_IT(htim2);
-  HAL_TIM_Base_Start_IT(htim3);
-  HAL_TIM_Base_Start_IT(htim4);
+  initLED();
+  initMainTable();
 
+  HAL_TIM_Base_Start_IT(&htim2);
+  HAL_TIM_Base_Start_IT(&htim3);
+  HAL_TIM_Base_Start_IT(&htim4);
+
+  //writeLedMatrix();
   srand(time(NULL));
   /* USER CODE END 2 */
 
@@ -669,7 +690,7 @@ int main(void)
 
   /* USER CODE BEGIN 3 */
   HAL_Delay(1);
-  ButtonPressedAction();
+  //ButtonPressedAction();
   }
   /* USER CODE END 3 */
 
@@ -806,7 +827,7 @@ static void MX_SPI1_Init(void)
   hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi1.Init.NSS = SPI_NSS_SOFT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_64;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
