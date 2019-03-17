@@ -48,6 +48,7 @@
 #define false 0
 #define true 1
 
+
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -86,6 +87,8 @@ volatile uint8_t currX = 1; //current position of the piece
 volatile uint8_t currY = 5;
 volatile uint8_t currShape = 0; //num of current shape (numbers shown below)
 volatile uint8_t currShapePhase = 0; // which rotation phase
+
+uint8_t stepDown; // variable used for going down with shape
 
 //T --> nr 0
 _Bool shapeT[4][4][4] = {
@@ -304,6 +307,37 @@ static void MX_TIM2_Init(void);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
+
+/* LED Connection (on Board)
+ * +-+-+
+ * |X| | 1 2 VCC |
+ * +-+-+
+ * |X| | 3 4 VCC |
+ * +-+-+
+ * |X| | 5 6 GND |
+ * +-+-+
+ * | | | 7 8
+ * +-+-+
+ * | | | 9 10
+ * +-+-+
+ * | | | 11 12
+ * +-+-+
+ * | | | 12 14
+ * +-+-+
+ * | | | 15 16
+ * +-+-+
+ * | | | 17 18
+ * +-+-+
+ * | |X| 19 20  | SCK
+ * +-+-+
+ * | | | 21 22
+ * +-+-+
+ * |X|X| 23 24 ChipSelect | MOSI
+ * +-+-+
+ * | | | 25 26
+ * +-+-+
+ */
+
 /*  Main table shape
  *  +-+-+-+-+-+-+-+-+-+-+
  *  |X| | | | | | | | |X| //no usage
@@ -344,6 +378,13 @@ static void MX_TIM2_Init(void);
  *  +-+-+-+-+-+-+-+-+-+-+
  */
 
+void rotate();
+void goLeft(); //Przesuniecie w lewo
+void goRight(); //Przesuniecie w prawo
+void goDown(); //Zjedz w dol
+void Play_Pause(); //play/pause
+void writeLedMatrix();
+
 // -------------< Timers, Spi, DAC, ADC functions >--------------
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 
@@ -355,7 +396,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 		case 1:
 		{
 			displayValue(1,(gameScore/1000));
-			DISP_DOT;
 		}break;
 		case 2:
 		{
@@ -364,7 +404,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 		case 3:
 		{
 			displayValue(3,(gameScore/10)%10);
-			DISP_DOT;
 		}break;
 		case 4:
 		{
@@ -381,10 +420,16 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	}
 
 	if(htim->Instance == TIM4)
-	{
-		//kod do wykonania w momencie przepelnienia timera
-	}
-
+	{        //                                                                              ________________
+		//writeLedMatrix(); //WAZNE ABY ODKOMENTOWAC PO TESTACH writeGG()//                  \  __________  /
+		stepDown++; //                                                                        \ \        / /
+		if(stepDown==10) //                                                                    \ \      / /
+		{ //                                                                                    \ \    / /
+			goDown(); //                                                                         \ \  / /
+			stepDown = 0;  //                                                                     \ \/ /
+		} //                                                                                       \__/
+	}  //                                                                                           __
+  //                                    														   |__|
 }
 
 // ----------------------<Game functions>------------------------
@@ -399,14 +444,36 @@ void initMainTable()
 	{
 		mainTable[17][j] = true;
 	}
+
+	/*testing
+	mainTable[1][5] = true;
+	mainTable[2][4] = true;
+	mainTable[2][5] = true;
+	mainTable[2][6] = true;
+
+	mainTable[16][1] = true;
+	mainTable[16][2] = true;
+	mainTable[16][3] = true;
+	mainTable[16][4] = true;
+	mainTable[16][6] = true;
+	mainTable[16][7] = true;
+	mainTable[16][8] = true;
+
+	mainTable[15][2] = true;
+	mainTable[15][3] = true;
+	mainTable[15][4] = true;
+	mainTable[15][5] = true;
+	mainTable[15][7] = true;
+	mainTable[15][8] = true;
+	*/
 }
-uint8_t valueOfRow(int row)
+uint8_t valueOfColumn(uint8_t col, uint8_t shift) //shift: 8 or 0 (screen 1 or 2)
 {
 	uint8_t suma = 0x00;
 	int tmp = 0x01;
 	for(int i=8;i>0;i--)
 	{
-		if(mainTable[row][i] == true)
+		if(mainTable[i+shift][col] == true)
 		{
 			suma += tmp;
 		}
@@ -416,27 +483,31 @@ uint8_t valueOfRow(int row)
 }
 void writeLedByte(uint8_t addr1, uint8_t data1, uint8_t addr2, uint8_t data2)
 {
-	if(!HAL_SPI_Transmit(&hspi1,&addr1,1,HAL_MAX_DELAY)) gameScore++;
-	if(!HAL_SPI_Transmit(&hspi1,&data1,1,HAL_MAX_DELAY)) gameScore++;
-	if(!HAL_SPI_Transmit(&hspi1,&addr2,1,HAL_MAX_DELAY)) gameScore++;
-	if(!HAL_SPI_Transmit(&hspi1,&data2,1,HAL_MAX_DELAY)) gameScore++;
+	uint8_t data[] = {addr1,data1,addr2,data2};
 
+	HAL_GPIO_WritePin(GPIOC,GPIO_PIN_5,GPIO_PIN_RESET);
+	HAL_SPI_Transmit(&hspi1,(uint8_t*)data,4,HAL_MAX_DELAY);
+	HAL_GPIO_WritePin(GPIOC,GPIO_PIN_5,GPIO_PIN_SET);
 }
 void initLED()
 {
-	writeLedByte(0x0f,0x01,0x0f,0x01); // Display text: all //for test
-	HAL_Delay(500);
+
 	writeLedByte(0x0b,0x07,0x0b,0x07); // Scan-Limit: all digits
 	writeLedByte(0x0c,0x01,0x0c,0x01); // Shutdown: Normal Operation
 	writeLedByte(0x09,0x00,0x09,0x00); // no Decode-Mode
-	writeLedByte(0x0a,0x05,0x0a,0x05); // Intensity of light: here 1/4
+	writeLedByte(0x0a,0x03,0x0a,0x03); // Intensity of light: here 1/4
 	writeLedByte(0x0f,0x00,0x0f,0x00); // Display text: nothing
 
+	//test
+	//writeLedByte(0x01,0x81,0x01,0xff); // Line 1
+	//writeLedByte(0x02,0x81,0x02,0xff); // Line 2
+	//writeLedByte(0x03,0x00,0x03,0x00); // Line 1
+	//writeLedByte(0x04,0x00,0x04,0x00); // Line 2
+	//writeLedByte(0x05,0x00,0x05,0x00); // Line 1
+	//writeLedByte(0x06,0x00,0x06,0x00); // Line 2
+	//writeLedByte(0x07,0x00,0x07,0x00); // Line 1
+	//writeLedByte(0x08,0x00,0x08,0x00); // Line 2
 
-	//writeLedByte(0x0f,0x00,0x0f,0x00); // Display text: nothing
-
-	writeLedByte(0x01,0xff,0x01,0xff); // Line 1
-	writeLedByte(0x02,0xff,0x02,0xff); // Line 2
 }
 
 _Bool ANDMatrix(int8_t row, int8_t col)
@@ -457,32 +528,32 @@ void writeLedMatrix()
 {
 	for(int i=1;i<9;i++)
 	{
-		writeLedByte(i,valueOfRow(i),i,valueOfRow(i+8));
+		writeLedByte(9-i,valueOfColumn(i,8),9-i,valueOfColumn(i,0));
 	}
 }
 
 //Obrot ksztaltu
 void rotate()
 {
-
+	currShapePhase = (currShapePhase + 1) % 4;
 }
 
 //Przesuniecie w lewo
 void goLeft()
 {
-
+	if(currY > 1) currY--;
 }
 
 //Przesuniecie w prawo
 void goRight()
 {
-
+	if(currY < 8)currY++;
 }
 
 //Zjedz w dol
 void goDown()
 {
-
+	if(currX < 16) currX++;
 }
 
 //play/pause
@@ -504,13 +575,14 @@ void movePiece(int direction)
 	}
 }
 
-void putShape(int8_t row, int8_t col)
+void putShape(_Bool shape[4][4][4], int8_t row, int8_t col, uint8_t position) // row and col means left top corner
 {
 	for(int8_t i = row;i < row + 4;i++)
 	{
 		for(int8_t j = col; j < col + 4; j++)
 		{
-
+			if(j < 9 && i < 16) mainTable[i][j] = shape[position][i-row][j-col];
+			if(shape[position][i-row-1][j-col-1] == true) gameScore++;
 		}
 	}
 }
@@ -518,27 +590,64 @@ void putShape(int8_t row, int8_t col)
 
 void placeNew()
 {
-	/*
-	uint8_t shape = rand()%7;
-	switch(shape)
+
+	uint8_t shapeNr = rand()%7;
+	currX = 1;
+	currY = 3;
+	currShape = shapeNr;
+	currShapePhase = 0;
+
+	switch(shapeNr)
 	{
-	case 0:
-	case 1:
-	case 2:
-	case 3:
-	case 4:
-	case 5:
-	case 6:
+	case 0: putShape(shapeT,currX,currY,currShapePhase);break;
+	case 1: putShape(shapeO,currX,currY,currShapePhase);break;
+	case 2: putShape(shapeI,currX,currY,currShapePhase);break;
+	case 3: putShape(shapeL,currX,currY,currShapePhase);break;
+	case 4: putShape(shapeJ,currX,currY,currShapePhase);break;
+	case 5: putShape(shapeS,currX,currY,currShapePhase);break;
+	case 6: putShape(shapeZ,currX,currY,currShapePhase);break;
 	}
-	*/
+
 }
 
-void deleteRow(uint8_t nr)
+void pushDownTable(uint8_t row)
+{
+	for(uint8_t i=row-1;i>1;i--)
+	{
+		for(uint8_t k=0;k<9;k++)
+		{
+			mainTable[i+1][k] = mainTable[i][k];
+		}
+	}
+}
+
+_Bool fullRow(uint8_t row)
+{
+	for(uint8_t i = 1; i<9; i++)
+	{
+		if(mainTable[row][i] == 0) return false;
+	}
+	return true;
+}
+
+void deleteRow(uint8_t row)
 {
 	for(int i=1;i<9;i++)
 	{
-		mainTable[nr][i] = 0;
+		mainTable[row][i] = 0;
 	}
+}
+
+void writeGG()
+{
+	writeLedByte(0x01,0x00,0x01,0x00); // Line 1
+	writeLedByte(0x02,0x08,0x02,0x08); // Line 2
+	writeLedByte(0x03,0x4c,0x03,0x4c); // Line 3
+	writeLedByte(0x04,0x4a,0x04,0x4a); // Line 4
+	writeLedByte(0x05,0x42,0x05,0x42); // Line 5
+	writeLedByte(0x06,0x42,0x06,0x42); // Line 6
+	writeLedByte(0x07,0x26,0x07,0x26); // Line 7
+	writeLedByte(0x08,0x1c,0x08,0x1c); // Line 8
 }
 
 void Finish()
@@ -669,16 +778,28 @@ int main(void)
   MX_SPI1_Init();
   MX_ADC1_Init();
   MX_TIM2_Init();
+
   /* USER CODE BEGIN 2 */
-  initLED();
-  initMainTable();
+
 
   HAL_TIM_Base_Start_IT(&htim2);
   HAL_TIM_Base_Start_IT(&htim3);
   HAL_TIM_Base_Start_IT(&htim4);
 
-  //writeLedMatrix();
-  srand(time(NULL));
+  srand((uint8_t)TIM2->ARR);
+  initLED();
+  initMainTable();
+
+  writeGG();
+
+  //placeNew();
+ // HAL_Delay(1000);
+  //placeNew();
+  //HAL_Delay(1000);
+  //placeNew();
+ // HAL_Delay(1000);
+  //placeNew();
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -689,7 +810,6 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
-  HAL_Delay(1);
   //ButtonPressedAction();
   }
   /* USER CODE END 3 */
@@ -983,6 +1103,9 @@ static void MX_GPIO_Init(void)
                           |GPIO_PIN_6|GPIO_PIN_0|GPIO_PIN_1, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_5, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : PE2 PE3 PE4 PE5 
@@ -993,6 +1116,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PC5 */
+  GPIO_InitStruct.Pin = GPIO_PIN_5;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PB12 PB13 PB14 PB15 */
   GPIO_InitStruct.Pin = GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15;
