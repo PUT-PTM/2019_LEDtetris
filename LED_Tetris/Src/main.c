@@ -666,7 +666,7 @@ void buttonPressedAction()
 		ADCvalue = HAL_ADC_GetValue(&hadc1);
 	}
 
-	if (ADCvalue < 4050)
+	if (ADCvalue < 4000)
 	{
 		HAL_Delay(1);
 
@@ -677,7 +677,7 @@ void buttonPressedAction()
 			ADCvalue = HAL_ADC_GetValue(&hadc1);
 		}
 
-		if (ADCvalue < 2300 && ADCvalue > 2250)
+		if (ADCvalue < 1500 && ADCvalue > 1300)
 		{
 			if (state == false)
 			{
@@ -687,7 +687,7 @@ void buttonPressedAction()
 			}
 		}
 
-		else if (ADCvalue < 1120 && ADCvalue >= 1050)
+		else if (ADCvalue < 750 && ADCvalue >= 600)
 		{
 			if (state == false)
 			{
@@ -697,7 +697,7 @@ void buttonPressedAction()
 			}
 		}
 
-		else if (ADCvalue < 600 && ADCvalue >540)
+		else if (ADCvalue < 400 && ADCvalue >300)
 		{
 			if (state == false)
 			{
@@ -707,7 +707,7 @@ void buttonPressedAction()
 			}
 		}
 
-		else if (ADCvalue < 250 && ADCvalue > 180)
+		else if (ADCvalue < 200 && ADCvalue > 100)
 		{
 			if (state == false)
 			{
@@ -778,7 +778,6 @@ int main(void)
   MX_SPI1_Init();
   MX_ADC1_Init();
   MX_TIM2_Init();
-
   /* USER CODE BEGIN 2 */
 
 
