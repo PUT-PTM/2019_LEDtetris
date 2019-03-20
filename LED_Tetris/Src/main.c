@@ -444,8 +444,7 @@ void initMainTable()
 	{
 		mainTable[17][j] = true;
 	}
-
-	/*testing
+	/*
 	mainTable[1][5] = true;
 	mainTable[2][4] = true;
 	mainTable[2][5] = true;
@@ -492,10 +491,10 @@ void writeLedByte(uint8_t addr1, uint8_t data1, uint8_t addr2, uint8_t data2)
 void initLED()
 {
 
+	writeLedByte(0x09,0x00,0x09,0x00); // no Decode-Mode
+	writeLedByte(0x0a,0x00,0x0a,0x00); // Intensity of light: here 1/4
 	writeLedByte(0x0b,0x07,0x0b,0x07); // Scan-Limit: all digits
 	writeLedByte(0x0c,0x01,0x0c,0x01); // Shutdown: Normal Operation
-	writeLedByte(0x09,0x00,0x09,0x00); // no Decode-Mode
-	writeLedByte(0x0a,0x03,0x0a,0x03); // Intensity of light: here 1/4
 	writeLedByte(0x0f,0x00,0x0f,0x00); // Display text: nothing
 
 	//test
@@ -642,12 +641,12 @@ void writeGG()
 {
 	writeLedByte(0x01,0x00,0x01,0x00); // Line 1
 	writeLedByte(0x02,0x08,0x02,0x08); // Line 2
-	writeLedByte(0x03,0x4c,0x03,0x4c); // Line 3
+	writeLedByte(0x03,0x0c,0x03,0x4c); // Line 3
 	writeLedByte(0x04,0x4a,0x04,0x4a); // Line 4
 	writeLedByte(0x05,0x42,0x05,0x42); // Line 5
 	writeLedByte(0x06,0x42,0x06,0x42); // Line 6
-	writeLedByte(0x07,0x26,0x07,0x26); // Line 7
-	writeLedByte(0x08,0x1c,0x08,0x1c); // Line 8
+	writeLedByte(0x07,0x3c,0x07,0x3c); // Line 7
+	writeLedByte(0x08,0x00,0x08,0x00); // Line 8
 }
 
 void Finish()
@@ -787,7 +786,7 @@ int main(void)
 
   srand((uint8_t)TIM2->ARR);
   initLED();
-  initMainTable();
+  //initMainTable();
 
   writeGG();
 
