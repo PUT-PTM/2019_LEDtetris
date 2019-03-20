@@ -580,8 +580,18 @@ void putShape(_Bool shape[4][4][4], int8_t row, int8_t col, uint8_t position) //
 	{
 		for(int8_t j = col; j < col + 4; j++)
 		{
-			if(j < 9 && i < 16) mainTable[i][j] = shape[position][i-row][j-col];
-			if(shape[position][i-row-1][j-col-1] == true) gameScore++;
+			if (j < 9 && i < 16)
+			{
+				int isZero = 0;
+				for (int k = 0; k < 4; k++)
+				{
+					if (shape[position][0][k] == 0) isZero++;
+					else break;
+				}
+				if (isZero == 4) mainTable[i - 1][j] = shape[position][i - row][j - col];
+				else mainTable[i][j] = shape[position][i - row][j - col];
+			}
+			//if(shape[position][i-row-1][j-col-1] == true) gameScore++;
 		}
 	}
 }
