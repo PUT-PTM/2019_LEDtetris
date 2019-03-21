@@ -88,7 +88,7 @@ volatile uint8_t currY = 5;
 volatile uint8_t currShape = 0; //num of current shape (numbers shown below)
 volatile uint8_t currShapePhase = 0; // which rotation phase
 
-uint8_t stepDown; // variable used for going down with shape
+uint8_t stepDownVar; // variable used for going down with shape
 
 //T --> nr 0
 _Bool shapeT[4][4][4] = {
@@ -420,16 +420,15 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	}
 
 	if(htim->Instance == TIM4)
-	{        //                                                                              ________________
-		//writeLedMatrix(); //WAZNE ABY ODKOMENTOWAC PO TESTACH writeGG()//                  \  __________  /
-		stepDown++; //                                                                        \ \        / /
-		if(stepDown==10) //                                                                    \ \      / /
-		{ //                                                                                    \ \    / /
-			goDown(); //                                                                         \ \  / /
-			stepDown = 0;  //                                                                     \ \/ /
-		} //                                                                                       \__/
-	}  //                                                                                           __
-  //                                    														   |__|
+	{
+		writeLedMatrix(); //WAZNE ABY ODKOMENTOWAC PO TESTACH writeGG()
+		stepDownVar++;
+		if(stepDownVar==10)
+		{
+			stepDown();
+			stepDownVar = 0;
+		}
+	}
 }
 
 // ----------------------<Game functions>------------------------
@@ -574,6 +573,18 @@ void movePiece(int direction)
 	}
 }
 
+_Bool firstRowZero(_Bool shape[4][4][4], uint8_t position)
+{
+	int isZero = 0;
+	for (int k = 0; k < 4; k++)
+	{
+		if (shape[position][0][k] == 0) isZero++;
+		else break;
+	}
+	if (isZero == 4) return true;
+	else return false;
+}
+
 void putShape(_Bool shape[4][4][4], int8_t row, int8_t col, uint8_t position) // row and col means left top corner
 {
 	for(int8_t i = row;i < row + 4;i++)
@@ -582,13 +593,7 @@ void putShape(_Bool shape[4][4][4], int8_t row, int8_t col, uint8_t position) //
 		{
 			if (j < 9 && i < 16)
 			{
-				int isZero = 0;
-				for (int k = 0; k < 4; k++)
-				{
-					if (shape[position][0][k] == 0) isZero++;
-					else break;
-				}
-				if (isZero == 4) mainTable[i - 1][j] = shape[position][i - row][j - col];
+				if(firstRowZero(shape,position)) mainTable[i - 1][j] = shape[position][i - row][j - col];
 				else mainTable[i][j] = shape[position][i - row][j - col];
 			}
 			//if(shape[position][i-row-1][j-col-1] == true) gameScore++;
@@ -600,11 +605,11 @@ void putShape(_Bool shape[4][4][4], int8_t row, int8_t col, uint8_t position) //
 void placeNew()
 {
 
-	uint8_t shapeNr = rand()%7;
+	uint8_t shapeNr = 4;
 	currX = 1;
-	currY = 3;
+	currY = 1;
 	currShape = shapeNr;
-	currShapePhase = 0;
+	currShapePhase = 1;
 
 	switch(shapeNr)
 	{
@@ -617,6 +622,237 @@ void placeNew()
 	case 6: putShape(shapeZ,currX,currY,currShapePhase);break;
 	}
 
+}
+
+void stepDown()
+{
+	switch(currShape)
+	{
+	case 0:
+	{
+		for(int8_t i = currX;i < currX + 4;i++)
+			{
+				for(int8_t j = currY; j < currY + 4; j++)
+				{
+					if (j < 9 && i < 16) mainTable[i][j] = false;
+				}
+			}
+		currX++;
+		if(firstRowZero(shapeT, currShapePhase) == true)
+		{
+			for(int8_t i = currX; i < currX + 4; i++)
+								{
+									for(int8_t j = currY; j < currY + 4; j++)
+									{
+										if (j < 9 && i < 16) mainTable[i-1][j] = shapeT[currShapePhase][i - currX][j - currY];
+									}
+								}
+		}
+		else
+		{
+			for(int8_t i = currX; i < currX + 4; i++)
+						{
+							for(int8_t j = currY; j < currY + 4; j++)
+							{
+								if (j < 9 && i < 16) mainTable[i][j] = shapeT[currShapePhase][i - currX][j - currY];
+							}
+						}
+		}
+		break;
+	}
+	case 1:
+		{
+			for(int8_t i = currX;i < currX + 4;i++)
+				{
+					for(int8_t j = currY; j < currY + 4; j++)
+					{
+						if (j < 9 && i < 16)mainTable[i][j] = false;
+					}
+				}
+			currX++;
+			if(firstRowZero(shapeO, currShapePhase) == true)
+					{
+						for(int8_t i = currX; i < currX + 4; i++)
+											{
+												for(int8_t j = currY; j < currY + 4; j++)
+												{
+													if (j < 9 && i < 16)mainTable[i-1][j] = shapeO[currShapePhase][i - currX][j - currY];
+												}
+											}
+					}
+					else
+					{
+						for(int8_t i = currX; i < currX + 4; i++)
+									{
+										for(int8_t j = currY; j < currY + 4; j++)
+										{
+											if (j < 9 && i < 16) mainTable[i][j] = shapeO[currShapePhase][i - currX][j - currY];
+										}
+									}
+					}
+			break;
+		}
+	case 2:
+		{
+			for(int8_t i = currX;i < currX + 4;i++)
+				{
+					for(int8_t j = currY; j < currY + 4; j++)
+					{
+						if (j < 9 && i < 16) mainTable[i][j] = false;
+					}
+				}
+			currX++;
+			if(firstRowZero(shapeI, currShapePhase) == true)
+					{
+						for(int8_t i = currX; i < currX + 4; i++)
+											{
+												for(int8_t j = currY; j < currY + 4; j++)
+												{
+													if (j < 9 && i < 16)mainTable[i-1][j] = shapeI[currShapePhase][i - currX][j - currY];
+												}
+											}
+					}
+					else
+					{
+						for(int8_t i = currX; i < currX + 4; i++)
+									{
+										for(int8_t j = currY; j < currY + 4; j++)
+										{
+											if (j < 9 && i < 16) mainTable[i][j] = shapeI[currShapePhase][i - currX][j - currY];
+										}
+									}
+					}
+			break;
+		}
+	case 3:
+		{
+			for(int8_t i = currX;i < currX + 4;i++)
+				{
+					for(int8_t j = currY; j < currY + 4; j++)
+					{
+						if (j < 9 && i < 16) mainTable[i][j] = false;
+					}
+				}
+			currX++;
+			if(firstRowZero(shapeL, currShapePhase) == true)
+					{
+						for(int8_t i = currX; i < currX + 4; i++)
+											{
+												for(int8_t j = currY; j < currY + 4; j++)
+												{
+													if (j < 9 && i < 16) mainTable[i-1][j] = shapeL[currShapePhase][i - currX][j - currY];
+												}
+											}
+					}
+					else
+					{
+						for(int8_t i = currX; i < currX + 4; i++)
+									{
+										for(int8_t j = currY; j < currY + 4; j++)
+										{
+											if (j < 9 && i < 16) mainTable[i][j] = shapeL[currShapePhase][i - currX][j - currY];
+										}
+									}
+					}
+			break;
+		}
+	case 4:
+		{
+			for(int8_t i = currX;i < currX + 4;i++)
+				{
+					for(int8_t j = currY; j < currY + 4; j++)
+					{
+						if (j < 9 && i < 16) mainTable[i][j] = false;
+					}
+				}
+			currX++;
+			if(firstRowZero(shapeJ, currShapePhase) == true)
+					{
+						for(int8_t i = currX; i < currX + 4; i++)
+											{
+												for(int8_t j = currY; j < currY + 4; j++)
+												{
+													if (j < 9 && i < 16) mainTable[i-1][j] = shapeJ[currShapePhase][i - currX][j - currY];
+												}
+											}
+					}
+					else
+					{
+						for(int8_t i = currX; i < currX + 4; i++)
+									{
+										for(int8_t j = currY; j < currY + 4; j++)
+										{
+											if (j < 9 && i < 16) mainTable[i][j] = shapeJ[currShapePhase][i - currX][j - currY];
+										}
+									}
+					}
+			break;
+		}
+	case 5:
+		{
+			for(int8_t i = currX;i < currX + 4;i++)
+				{
+					for(int8_t j = currY; j < currY + 4; j++)
+					{
+						if (j < 9 && i < 16) mainTable[i][j] = false;
+					}
+				}
+			currX++;
+			if(firstRowZero(shapeS, currShapePhase) == true)
+					{
+						for(int8_t i = currX; i < currX + 4; i++)
+											{
+												for(int8_t j = currY; j < currY + 4; j++)
+												{
+													if (j < 9 && i < 16) mainTable[i-1][j] = shapeS[currShapePhase][i - currX][j - currY];
+												}
+											}
+					}
+					else
+					{
+						for(int8_t i = currX; i < currX + 4; i++)
+									{
+										for(int8_t j = currY; j < currY + 4; j++)
+										{
+											if (j < 9 && i < 16) mainTable[i][j] = shapeS[currShapePhase][i - currX][j - currY];
+										}
+									}
+					}
+			break;
+		}
+	case 6:
+		{
+			for(int8_t i = currX;i < currX + 4;i++)
+				{
+					for(int8_t j = currY; j < currY + 4; j++)
+					{
+						if (j < 9 && i < 16) mainTable[i][j] = false;
+					}
+				}
+			currX++;
+			if(firstRowZero(shapeZ, currShapePhase) == true)
+					{
+						for(int8_t i = currX; i < currX + 4; i++)
+											{
+												for(int8_t j = currY; j < currY + 4; j++)
+												{
+													if (j < 9 && i < 16)mainTable[i-1][j] = shapeZ[currShapePhase][i - currX][j - currY];
+												}
+											}
+					}
+					else
+					{
+						for(int8_t i = currX; i < currX + 4; i++)
+									{
+										for(int8_t j = currY; j < currY + 4; j++)
+										{
+											if (j < 9 && i < 16)mainTable[i][j] = shapeZ[currShapePhase][i - currX][j - currY];
+										}
+									}
+					}
+			break;
+		}
+	}
 }
 
 void pushDownTable(uint8_t row)
@@ -794,11 +1030,15 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim3);
   HAL_TIM_Base_Start_IT(&htim4);
 
-  srand((uint8_t)TIM2->ARR);
+  //srand((uint8_t)TIM2->ARR);
   initLED();
-  //initMainTable();
-
-  writeGG();
+  initMainTable();
+  placeNew();
+  writeLedMatrix();
+//  HAL_Delay(1000);
+//  stepDown();
+//  writeLedMatrix();
+  //writeGG();
 
   //placeNew();
  // HAL_Delay(1000);
@@ -818,7 +1058,7 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
-  //ButtonPressedAction();
+  buttonPressedAction();
   }
   /* USER CODE END 3 */
 
