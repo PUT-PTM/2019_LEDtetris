@@ -57,7 +57,6 @@ ADC_HandleTypeDef hadc1;
 DAC_HandleTypeDef hdac;
 
 SPI_HandleTypeDef hspi1;
-SPI_HandleTypeDef hspi2;
 
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
@@ -73,7 +72,7 @@ TIM_HandleTypeDef htim4;
 // TIM3 --> play music [8000 Hz]
 // TIM4 --> frequency of game [10Hz]
 
-_Bool mainTable[18][10] = { false }; //18 rows, 10 columns
+volatile _Bool mainTable[18][10] = { false }; //18 rows, 10 columns
 
 _Bool gameOn = true; // is game paused or not
 _Bool state = false; //state of pressed button
@@ -89,6 +88,9 @@ volatile uint8_t currShape = 0; //num of current shape (numbers shown below)
 volatile uint8_t currShapePhase = 0; // which rotation phase
 
 uint8_t stepDownVar; // variable used for going down with shape
+
+extern const uint8_t rawData[669362];
+int32_t musicIndex = 0;
 
 //T --> nr 0
 _Bool shapeT[4][4][4] = {
@@ -295,7 +297,6 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_TIM4_Init(void);
 static void MX_TIM3_Init(void);
-static void MX_SPI2_Init(void);
 static void MX_DAC_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_ADC1_Init(void);
@@ -416,17 +417,25 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 
 	if(htim->Instance == TIM3)
 	{
-		//kod do wykonania w momencie przepelnienia timera
+		if(gameOn == true)
+		{
+			HAL_DAC_SetValue(&hdac,DAC_CHANNEL_1,DAC_ALIGN_12B_R,rawData[musicIndex]);
+			musicIndex++;
+			if(musicIndex == 669362) musicIndex = 0;
+		}
 	}
 
 	if(htim->Instance == TIM4)
 	{
-		writeLedMatrix(); //WAZNE ABY ODKOMENTOWAC PO TESTACH writeGG()
-		stepDownVar++;
-		if(stepDownVar==10)
+		if(gameOn == true)
 		{
-			stepDown();
-			stepDownVar = 0;
+			writeLedMatrix(); //WAZNE ABY ODKOMENTOWAC PO TESTACH writeGG()
+			stepDownVar++;
+			if(stepDownVar==10)
+			{
+				goDown();
+				stepDownVar = 0;
+			}
 		}
 	}
 }
@@ -508,7 +517,7 @@ void initLED()
 
 }
 
-_Bool ANDMatrix(int8_t row, int8_t col)
+_Bool ANDMatrix(_Bool shape[4][4][4], int8_t row, int8_t col,uint8_t position)
 {
 	for(int8_t i = row;i < row + 4; i++)
 	{
@@ -516,7 +525,7 @@ _Bool ANDMatrix(int8_t row, int8_t col)
 		{
 			if(i < 0 || i > 9) continue;
 			if(j < 0 || j > 9) continue;
-			if(mainTable[i][j] == 1 && 1 == 1) return false;
+			if(mainTable[i][j] == 1 && shape[position][i-row][j-col] == 1) return false;
 		}
 	}
 	return true;
@@ -560,6 +569,8 @@ void Play_Pause()
 	gameOn ^= 1;
 }
 
+//maybe not use, remove it after prapare new solution
+/*
 void movePiece(int direction)
 {
 	switch(direction)
@@ -572,6 +583,7 @@ void movePiece(int direction)
 	default:break;
 	}
 }
+*/
 
 _Bool firstRowZero(_Bool shape[4][4][4], uint8_t position)
 {
@@ -585,6 +597,11 @@ _Bool firstRowZero(_Bool shape[4][4][4], uint8_t position)
 	else return false;
 }
 
+void removeShape(_Bool shape[4][4][4], int8_t row, int8_t col, uint8_t position)
+{
+
+}
+
 void putShape(_Bool shape[4][4][4], int8_t row, int8_t col, uint8_t position) // row and col means left top corner
 {
 	for(int8_t i = row;i < row + 4;i++)
@@ -593,14 +610,12 @@ void putShape(_Bool shape[4][4][4], int8_t row, int8_t col, uint8_t position) //
 		{
 			if (j < 9 && i < 16)
 			{
-				if(firstRowZero(shape,position)) mainTable[i - 1][j] = shape[position][i - row][j - col];
-				else mainTable[i][j] = shape[position][i - row][j - col];
+				 mainTable[i][j] = shape[position][i - row][j - col];
 			}
-			//if(shape[position][i-row-1][j-col-1] == true) gameScore++;
+			//if(shape[position][i-row-1][j-col-1] == true) gameScore++; //remove it after testing game
 		}
 	}
 }
-
 
 void placeNew()
 {
@@ -615,13 +630,13 @@ void placeNew()
 	{
 	case 0: putShape(shapeT,currX,currY,currShapePhase);break;
 	case 1: putShape(shapeO,currX,currY,currShapePhase);break;
-	case 2: putShape(shapeI,currX,currY,currShapePhase);break;
+	case 2: putShape(shapeI,currX-1,currY,currShapePhase);break;
 	case 3: putShape(shapeL,currX,currY,currShapePhase);break;
 	case 4: putShape(shapeJ,currX,currY,currShapePhase);break;
-	case 5: putShape(shapeS,currX,currY,currShapePhase);break;
-	case 6: putShape(shapeZ,currX,currY,currShapePhase);break;
+	case 5: putShape(shapeS,currX-1,currY,currShapePhase);break;
+	case 6: putShape(shapeZ,currX-1,currY,currShapePhase);break;
 	}
-
+	//'curr-1' is in some shapes cause shape is starting not from first row
 }
 
 void stepDown()
@@ -1018,7 +1033,6 @@ int main(void)
   MX_GPIO_Init();
   MX_TIM4_Init();
   MX_TIM3_Init();
-  MX_SPI2_Init();
   MX_DAC_Init();
   MX_SPI1_Init();
   MX_ADC1_Init();
@@ -1029,6 +1043,8 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim2);
   HAL_TIM_Base_Start_IT(&htim3);
   HAL_TIM_Base_Start_IT(&htim4);
+
+  HAL_DAC_Start(&hdac,DAC_CHANNEL_1);
 
   //srand((uint8_t)TIM2->ARR);
   initLED();
@@ -1207,30 +1223,6 @@ static void MX_SPI1_Init(void)
 
 }
 
-/* SPI2 init function */
-static void MX_SPI2_Init(void)
-{
-
-  /* SPI2 parameter configuration*/
-  hspi2.Instance = SPI2;
-  hspi2.Init.Mode = SPI_MODE_MASTER;
-  hspi2.Init.Direction = SPI_DIRECTION_2LINES;
-  hspi2.Init.DataSize = SPI_DATASIZE_8BIT;
-  hspi2.Init.CLKPolarity = SPI_POLARITY_LOW;
-  hspi2.Init.CLKPhase = SPI_PHASE_1EDGE;
-  hspi2.Init.NSS = SPI_NSS_SOFT;
-  hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_32;
-  hspi2.Init.FirstBit = SPI_FIRSTBIT_MSB;
-  hspi2.Init.TIMode = SPI_TIMODE_DISABLE;
-  hspi2.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
-  hspi2.Init.CRCPolynomial = 10;
-  if (HAL_SPI_Init(&hspi2) != HAL_OK)
-  {
-    _Error_Handler(__FILE__, __LINE__);
-  }
-
-}
-
 /* TIM2 init function */
 static void MX_TIM2_Init(void)
 {
@@ -1342,8 +1334,8 @@ static void MX_GPIO_Init(void)
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOE_CLK_ENABLE();
   __HAL_RCC_GPIOH_CLK_ENABLE();
-  __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
