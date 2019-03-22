@@ -67,7 +67,6 @@ TIM_HandleTypeDef htim4;
 // ADC1 --> buttons for sterring
 // DAC  --> music through the speaker
 // SPI1 --> LED matrix
-// SPI2 --> music
 // TIM2 --> 7-segment display [400 Hz]
 // TIM3 --> play music [8000 Hz]
 // TIM4 --> frequency of game [10Hz]
@@ -329,11 +328,11 @@ static void MX_TIM2_Init(void);
  * +-+-+
  * | | | 17 18
  * +-+-+
- * | |X| 19 20  | SCK
+ * | |X| 19 20  | MOSI
  * +-+-+
  * | | | 21 22
  * +-+-+
- * |X|X| 23 24 ChipSelect | MOSI
+ * |X|X| 23 24 ChipSelect | SCK
  * +-+-+
  * | | | 25 26
  * +-+-+
@@ -385,6 +384,9 @@ void goRight(); //Przesuniecie w prawo
 void goDown(); //Zjedz w dol
 void Play_Pause(); //play/pause
 void writeLedMatrix();
+void removeShape(_Bool shape[4][4][4], int8_t row, int8_t col, uint8_t position);
+void putShape(_Bool shape[4][4][4], int8_t row, int8_t col, uint8_t position);
+void placeNew();
 
 // -------------< Timers, Spi, DAC, ADC functions >--------------
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
@@ -417,12 +419,14 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 
 	if(htim->Instance == TIM3)
 	{
+		/*
 		if(gameOn == true)
 		{
 			HAL_DAC_SetValue(&hdac,DAC_CHANNEL_1,DAC_ALIGN_12B_R,rawData[musicIndex]);
 			musicIndex++;
-			if(musicIndex == 669362) musicIndex = 0;
+			if(musicIndex >= 669361) musicIndex = 0;
 		}
+		*/
 	}
 
 	if(htim->Instance == TIM4)
@@ -517,18 +521,18 @@ void initLED()
 
 }
 
-_Bool ANDMatrix(_Bool shape[4][4][4], int8_t row, int8_t col,uint8_t position)
+_Bool ANDMatrix(_Bool shape[4][4][4], int8_t row, int8_t col,uint8_t position) //return if can change position or rotate shape
 {
 	for(int8_t i = row;i < row + 4; i++)
 	{
 		for(int8_t j = col; j < col + 4;j++)
 		{
-			if(i < 0 || i > 9) continue;
+			if(i < 0 || i > 17) continue;
 			if(j < 0 || j > 9) continue;
-			if(mainTable[i][j] == 1 && shape[position][i-row][j-col] == 1) return false;
+			if(mainTable[i][j] == 1 && shape[position][i-row][j-col] == 1) return true;
 		}
 	}
-	return true;
+	return false;
 }
 
 void writeLedMatrix()
@@ -542,7 +546,7 @@ void writeLedMatrix()
 //Obrot ksztaltu
 void rotate()
 {
-	currShapePhase = (currShapePhase + 1) % 4;
+	currShapePhase = (currShapePhase++) % 4;
 }
 
 //Przesuniecie w lewo
@@ -560,7 +564,28 @@ void goRight()
 //Zjedz w dol
 void goDown()
 {
-	if(currX < 16) currX++;
+	_Bool*** tmpShape;
+	switch(currShape)
+	{
+	case 0:tmpShape = shapeT;break;
+	case 1:tmpShape = shapeO;break;
+	case 2:tmpShape = shapeI;break;
+	case 3:tmpShape = shapeL;break;
+	case 4:tmpShape = shapeJ;break;
+	case 5:tmpShape = shapeS;break;
+	case 6:tmpShape = shapeZ;break;
+	}
+	removeShape(tmpShape,currX,currY,currShapePhase);
+	if(ANDMatrix(tmpShape,currX+1,currY,currShapePhase) == false)
+	{
+		putShape(tmpShape,++currX,currY,currShapePhase);
+	}
+	else
+	{
+		putShape(tmpShape,currX,currY,currShapePhase);
+		placeNew();
+	}
+	//if(currX < 16) currX++;
 }
 
 //play/pause
@@ -587,19 +612,25 @@ void movePiece(int direction)
 
 _Bool firstRowZero(_Bool shape[4][4][4], uint8_t position)
 {
-	int isZero = 0;
 	for (int k = 0; k < 4; k++)
 	{
-		if (shape[position][0][k] == 0) isZero++;
-		else break;
+		if (shape[position][0][k] == true) return false;
 	}
-	if (isZero == 4) return true;
-	else return false;
+	return true;
 }
 
 void removeShape(_Bool shape[4][4][4], int8_t row, int8_t col, uint8_t position)
 {
-
+	for(int8_t i = row;i < row + 4;i++)
+		{
+			for(int8_t j = col; j < col + 4; j++)
+			{
+				if (j < 9 && i < 17 && j >= 0)
+				{
+					 if(shape[position][i - row][j - col] == true) mainTable[i][j] = false;
+				}
+			}
+		}
 }
 
 void putShape(_Bool shape[4][4][4], int8_t row, int8_t col, uint8_t position) // row and col means left top corner
@@ -608,11 +639,10 @@ void putShape(_Bool shape[4][4][4], int8_t row, int8_t col, uint8_t position) //
 	{
 		for(int8_t j = col; j < col + 4; j++)
 		{
-			if (j < 9 && i < 16)
+			if (j < 9 && i < 17 && j >= 0)
 			{
-				 mainTable[i][j] = shape[position][i - row][j - col];
+				 if(shape[position][i - row][j - col] == true) mainTable[i][j] = true;
 			}
-			//if(shape[position][i-row-1][j-col-1] == true) gameScore++; //remove it after testing game
 		}
 	}
 }
@@ -620,11 +650,11 @@ void putShape(_Bool shape[4][4][4], int8_t row, int8_t col, uint8_t position) //
 void placeNew()
 {
 
-	uint8_t shapeNr = 4;
+	uint8_t shapeNr = rand()%7;
 	currX = 1;
-	currY = 1;
+	currY = 3;
 	currShape = shapeNr;
-	currShapePhase = 1;
+	currShapePhase = 0;
 
 	switch(shapeNr)
 	{
@@ -902,7 +932,7 @@ void writeGG()
 {
 	writeLedByte(0x01,0x00,0x01,0x00); // Line 1
 	writeLedByte(0x02,0x08,0x02,0x08); // Line 2
-	writeLedByte(0x03,0x0c,0x03,0x4c); // Line 3
+	writeLedByte(0x03,0x4c,0x03,0x4c); // Line 3
 	writeLedByte(0x04,0x4a,0x04,0x4a); // Line 4
 	writeLedByte(0x05,0x42,0x05,0x42); // Line 5
 	writeLedByte(0x06,0x42,0x06,0x42); // Line 6
@@ -1046,15 +1076,14 @@ int main(void)
 
   HAL_DAC_Start(&hdac,DAC_CHANNEL_1);
 
-  //srand((uint8_t)TIM2->ARR);
+  srand((uint8_t)TIM2->ARR);
   initLED();
   initMainTable();
   placeNew();
-  writeLedMatrix();
 //  HAL_Delay(1000);
 //  stepDown();
 //  writeLedMatrix();
-  //writeGG();
+   //writeGG();
 
   //placeNew();
  // HAL_Delay(1000);
@@ -1074,7 +1103,7 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
-  buttonPressedAction();
+  //buttonPressedAction(); //uncomment with having buttons
   }
   /* USER CODE END 3 */
 
