@@ -47,6 +47,7 @@
 
 #define false 0
 #define true 1
+#define STEPDOWNMAX 8
 
 
 /* USER CODE END Includes */
@@ -73,7 +74,7 @@ TIM_HandleTypeDef htim4;
 
 volatile _Bool mainTable[18][10] = { false }; //18 rows, 10 columns
 
-_Bool gameOn = true; // is game paused or not
+_Bool gameOn = false; // is game paused or not
 _Bool state = false; //state of pressed button
 volatile uint16_t gameScore = 0; //score of game
 
@@ -87,206 +88,18 @@ volatile uint8_t currShape = 0; //num of current shape (numbers shown below)
 volatile uint8_t currShapePhase = 0; // which rotation phase
 
 uint8_t stepDownVar; // variable used for going down with shape
+volatile uint8_t stepDownVarMax = STEPDOWNMAX;
 
 extern const uint8_t rawData[669362];
 int32_t musicIndex = 0;
 
-//T --> nr 0
-_Bool shapeT[4][4][4] = {
-		{
-			{0,0,1,0},
-			{0,1,1,1},
-			{0,0,0,0},
-			{0,0,0,0}
-		},
-		{
-			{0,0,1,0},
-			{0,0,1,1},
-			{0,0,1,0},
-			{0,0,0,0}
-		},
-		{
-			{0,0,0,0},
-			{0,1,1,1},
-			{0,0,1,0},
-			{0,0,0,0}
-		},
-		{
-			{0,0,1,0},
-			{0,1,1,0},
-			{0,0,1,0},
-			{0,0,0,0}
-		},
-};
-
-//O --> nr 1
-_Bool shapeO[4][4][4] = {
-		{
-			{0,0,0,0},
-			{0,1,1,0},
-			{0,1,1,0},
-			{0,0,0,0}
-		},
-		{
-			{0,0,0,0},
-			{0,1,1,0},
-			{0,1,1,0},
-			{0,0,0,0}
-		},
-		{
-			{0,0,0,0},
-			{0,1,1,0},
-			{0,1,1,0},
-			{0,0,0,0}
-		},
-		{
-			{0,0,0,0},
-			{0,1,1,0},
-			{0,1,1,0},
-			{0,0,0,0}
-		},
-};
-
-//I --> nr 2
-_Bool shapeI[4][4][4] = {
-		{
-			{0,0,0,0},
-			{0,0,0,0},
-			{1,1,1,1},
-			{0,0,0,0}
-		},
-		{
-			{0,0,1,0},
-			{0,0,1,0},
-			{0,0,1,0},
-			{0,0,1,0}
-		},
-		{
-			{0,0,0,0},
-			{1,1,1,1},
-			{0,0,0,0},
-			{0,0,0,0}
-
-		},
-		{
-			{0,1,0,0},
-			{0,1,0,0},
-			{0,1,0,0},
-			{0,1,0,0}
-		},
-};
-
-//L --> nr 3
-_Bool shapeL[4][4][4] = {
-		{
-			{0,0,0,1},
-			{0,1,1,1},
-			{0,0,0,0},
-			{0,0,0,0}
-		},
-		{
-			{0,0,1,0},
-			{0,0,1,0},
-			{0,0,1,1},
-			{0,0,0,0}
-		},
-		{
-			{0,0,0,0},
-			{0,1,1,1},
-			{0,1,0,0},
-			{0,0,0,0}
-		},
-		{
-			{0,1,1,0},
-			{0,0,1,0},
-			{0,0,1,0},
-			{0,0,0,0}
-		},
-};
-
-//J --> nr 4
-_Bool shapeJ[4][4][4] = {
-		{
-			{0,1,0,0},
-			{0,1,1,1},
-			{0,0,0,0},
-			{0,0,0,0}
-		},
-		{
-			{0,0,1,1},
-			{0,0,1,0},
-			{0,0,1,0},
-			{0,0,0,0}
-		},
-		{
-			{0,0,0,0},
-			{0,1,1,1},
-			{0,0,0,1},
-			{0,0,0,0}
-		},
-		{
-			{0,0,1,0},
-			{0,0,1,0},
-			{0,1,1,0},
-			{0,0,0,0}
-		},
-};
-
-//S --> nr 5
-_Bool shapeS[4][4][4] = {
-		{
-			{0,0,0,0},
-			{0,0,1,1},
-			{0,1,1,0},
-			{0,0,0,0}
-		},
-		{
-			{0,0,1,0},
-			{0,0,1,1},
-			{0,0,0,1},
-			{0,0,0,0}
-		},
-		{
-			{0,0,0,0},
-			{0,0,1,1},
-			{0,1,1,0},
-			{0,0,0,0}
-		},
-		{
-			{0,1,0,0},
-			{0,1,1,0},
-			{0,0,1,0},
-			{0,0,0,0}
-		},
-};
-
-//Z --> nr 6
-_Bool shapeZ[4][4][4] = {
-		{
-			{0,0,0,0},
-			{0,1,1,0},
-			{0,0,1,1},
-			{0,0,0,0}
-		},
-		{
-			{0,0,0,1},
-			{0,0,1,1},
-			{0,0,1,0},
-			{0,0,0,0}
-		},
-		{
-			{0,0,0,0},
-			{0,1,1,0},
-			{0,0,1,1},
-			{0,0,0,0}
-		},
-		{
-			{0,0,1,0},
-			{0,1,1,0},
-			{0,1,0,0},
-			{0,0,0,0}
-		},
-};
+extern _Bool shapeT[4][4][4];
+extern _Bool shapeO[4][4][4];
+extern _Bool shapeI[4][4][4];
+extern _Bool shapeL[4][4][4];
+extern _Bool shapeJ[4][4][4];
+extern _Bool shapeS[4][4][4];
+extern _Bool shapeZ[4][4][4];
 
 
 /* USER CODE END PV */
@@ -307,76 +120,6 @@ static void MX_TIM2_Init(void);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
-
-/* LED Connection (on Board)
- * +-+-+
- * |X| | 1 2 VCC |
- * +-+-+
- * |X| | 3 4 VCC |
- * +-+-+
- * |X| | 5 6 GND |
- * +-+-+
- * | | | 7 8
- * +-+-+
- * | | | 9 10
- * +-+-+
- * | | | 11 12
- * +-+-+
- * | | | 12 14
- * +-+-+
- * | | | 15 16
- * +-+-+
- * | | | 17 18
- * +-+-+
- * | |X| 19 20  | MOSI
- * +-+-+
- * | | | 21 22
- * +-+-+
- * |X|X| 23 24 ChipSelect | SCK
- * +-+-+
- * | | | 25 26
- * +-+-+
- */
-
-/*  Main table shape
- *  +-+-+-+-+-+-+-+-+-+-+
- *  |X| | | | | | | | |X| //no usage
- *  +-+-+-+-+-+-+-+-+-+-+
- *  |X| | | | | | | | |X|
- *  +-+-+-+-+-+-+-+-+-+-+
- *  |X| | | | | | | | |X|
- *  +-+-+-+-+-+-+-+-+-+-+
- *  |X| | | | | | | | |X|
- *  +-+-+-+-+-+-+-+-+-+-+
- *  |X| | | | | | | | |X|
- *  +-+-+-+-+-+-+-+-+-+-+
- *  |X| | | | | | | | |X|
- *  +-+-+-+-+-+-+-+-+-+-+
- *  |X| | | | | | | | |X|
- *  +-+-+-+-+-+-+-+-+-+-+
- *  |X| | | | | | | | |X|
- *  +-+-+-+-+-+-+-+-+-+-+
- *  |X| | | | | | | | |X|
- *  +-+-+-+-+-+-+-+-+-+-+
- *  |X| | | | | | | | |X|
- *  +-+-+-+-+-+-+-+-+-+-+
- *  |X| | | | | | | | |X|
- *  +-+-+-+-+-+-+-+-+-+-+
- *  |X| | | | | | | | |X|
- *  +-+-+-+-+-+-+-+-+-+-+
- *  |X| | | | | | | | |X|
- *  +-+-+-+-+-+-+-+-+-+-+
- *  |X| | | | | | | | |X|
- *  +-+-+-+-+-+-+-+-+-+-+
- *  |X| | | | | | | | |X|
- *  +-+-+-+-+-+-+-+-+-+-+
- *  |X| | | | | | | | |X|
- *  +-+-+-+-+-+-+-+-+-+-+
- *  |X| | | | | | | | |X|
- *  +-+-+-+-+-+-+-+-+-+-+
- *  |X|X|X|X|X|X|X|X|X|X|
- *  +-+-+-+-+-+-+-+-+-+-+
- */
 
 // ---------------< declarations of functions >-----------------
 void rotate();
@@ -439,8 +182,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 		if(gameOn == true)
 		{
 			writeLedMatrix(); //WAZNE ABY ODKOMENTOWAC PO TESTACH writeGG()
-			stepDownVar++;
-			if(stepDownVar==8) //new value 8 !!
+			++stepDownVar;
+			if(stepDownVar >= stepDownVarMax) //new value 8 !!
 			{
 				stepDown();
 				stepDownVar = 0;
@@ -596,7 +339,6 @@ void goLeft()
 	{
 		putShape(tmpShape,currX,currY,currShapePhase);
 	}
-	//if(currY > 1) currY--;
 }
 
 //Przesuniecie w prawo
@@ -622,13 +364,12 @@ void goRight()
 	{
 		putShape(tmpShape,currX,currY,currShapePhase);
 	}
-	//if(currY < 8)currY++;
 }
 
 //Zjedz w dol
 void goDown()
 {
-	//if(currX < 16) currX++;
+	stepDownVarMax = 2;
 }
 
 //play/pause
@@ -653,6 +394,7 @@ void movePiece(int direction)
 }
 */
 
+// no usage, delete after testing
 _Bool firstRowZero(_Bool shape[4][4][4], uint8_t position)
 {
 	for (int k = 0; k < 4; k++)
@@ -760,14 +502,19 @@ void stepDown()
 		else
 		{
 			putShape(tmpShape,currX,currY,currShapePhase);
+			uint8_t countLines = 0;
 			for(uint8_t i = currX; i < currX + 4; i++)
 			{
 				if(fullRow(i)==true && i < 17)
 				{
 					deleteRow(i);
+					countLines++;
 					pushDownTable(i);
 				}
 			}
+			if(countLines == 4) countLines+=6;
+			gameScore = gameScore + countLines;
+			stepDownVarMax = STEPDOWNMAX;
 			placeNew();
 		}
 }
@@ -798,9 +545,9 @@ _Bool fullRow(uint8_t row)
 
 void deleteRow(uint8_t row)
 {
-	for(int i=1;i<9;i++)
+	for(uint8_t i=1;i<9;i++)
 	{
-		mainTable[row][i] = 0;
+		mainTable[row][i] = false;
 	}
 }
 
@@ -956,10 +703,14 @@ int main(void)
   srand((uint8_t)TIM2->ARR);
   initLED();
   initMainTable();
+  gameOn = true;
   placeNew();
 
   /* MAKRO DO TESTOW  */
-  HAL_Delay(20000);
+
+  HAL_Delay(1100);
+  goDown();
+  HAL_Delay(11000);
   goLeft();
   HAL_Delay(1000);
   goLeft();
@@ -973,7 +724,9 @@ int main(void)
   goRight();
   HAL_Delay(1000);
   goRight();
-  HAL_Delay(10000);
+  HAL_Delay(1000);
+  goRight();
+  HAL_Delay(9000);
   rotate();
   HAL_Delay(9000);
   rotate();
@@ -985,6 +738,24 @@ int main(void)
   goLeft();
   HAL_Delay(1000);
   goLeft();
+  HAL_Delay(8000);
+  rotate();
+  HAL_Delay(1000);
+  goLeft();
+  HAL_Delay(1000);
+  goLeft();
+  HAL_Delay(1000);
+  goLeft();
+  HAL_Delay(15000);
+  rotate();
+  HAL_Delay(1000);
+  goRight();
+  HAL_Delay(1000);
+  goRight();
+  HAL_Delay(1000);
+  goRight();
+
+
   /*END OF MACRO*/
 
 
