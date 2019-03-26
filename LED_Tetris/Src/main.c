@@ -197,35 +197,16 @@ void initMainTable()
 {
 	for(int i=0; i<18; i++)
 	{
-		mainTable[i][0] = true;
-		mainTable[i][9] = true;
+		for(int j=1;j<9;j++)
+		{
+			mainTable[i][0] = true;
+			mainTable[i][j] = false;
+			mainTable[i][9] = true;
+			mainTable[17][j] = true;
+		}
 	}
-	for(int j=1;j<9;j++)
-	{
-		mainTable[17][j] = true;
-	}
-	/*
-	mainTable[1][5] = true;
-	mainTable[2][4] = true;
-	mainTable[2][5] = true;
-	mainTable[2][6] = true;
-
-	mainTable[16][1] = true;
-	mainTable[16][2] = true;
-	mainTable[16][3] = true;
-	mainTable[16][4] = true;
-	mainTable[16][6] = true;
-	mainTable[16][7] = true;
-	mainTable[16][8] = true;
-
-	mainTable[15][2] = true;
-	mainTable[15][3] = true;
-	mainTable[15][4] = true;
-	mainTable[15][5] = true;
-	mainTable[15][7] = true;
-	mainTable[15][8] = true;
-	*/
 }
+
 uint8_t valueOfColumn(uint8_t col, uint8_t shift) //shift: 8 or 0 (screen 1 or 2)
 {
 	uint8_t suma = 0x00;
@@ -240,6 +221,7 @@ uint8_t valueOfColumn(uint8_t col, uint8_t shift) //shift: 8 or 0 (screen 1 or 2
 	}
 	return suma;
 }
+
 void writeLedByte(uint8_t addr1, uint8_t data1, uint8_t addr2, uint8_t data2)
 {
 	uint8_t data[] = {addr1,data1,addr2,data2};
@@ -248,6 +230,7 @@ void writeLedByte(uint8_t addr1, uint8_t data1, uint8_t addr2, uint8_t data2)
 	HAL_SPI_Transmit(&hspi1,(uint8_t*)data,4,HAL_MAX_DELAY);
 	HAL_GPIO_WritePin(GPIOC,GPIO_PIN_5,GPIO_PIN_SET);
 }
+
 void initLED()
 {
 
@@ -257,15 +240,6 @@ void initLED()
 	writeLedByte(0x0c,0x01,0x0c,0x01); // Shutdown: Normal Operation
 	writeLedByte(0x0f,0x00,0x0f,0x00); // Display text: nothing
 
-	//test
-	//writeLedByte(0x01,0x81,0x01,0xff); // Line 1
-	//writeLedByte(0x02,0x81,0x02,0xff); // Line 2
-	//writeLedByte(0x03,0x00,0x03,0x00); // Line 1
-	//writeLedByte(0x04,0x00,0x04,0x00); // Line 2
-	//writeLedByte(0x05,0x00,0x05,0x00); // Line 1
-	//writeLedByte(0x06,0x00,0x06,0x00); // Line 2
-	//writeLedByte(0x07,0x00,0x07,0x00); // Line 1
-	//writeLedByte(0x08,0x00,0x08,0x00); // Line 2
 }
 
 _Bool ANDMatrix(_Bool shape[4][4][4], int8_t row, int8_t col,uint8_t position) //return if can change position or rotate shape
@@ -551,6 +525,18 @@ void deleteRow(uint8_t row)
 	}
 }
 
+void writePlay()
+{
+	writeLedByte(0x01,0x00,0x01,0x16); // Line 1
+	writeLedByte(0x02,0x82,0x02,0x13); // Line 2
+	writeLedByte(0x03,0x03,0x03,0xf6); // Line 3
+	writeLedByte(0x04,0x11,0x04,0x00); // Line 4
+	writeLedByte(0x05,0x38,0x05,0x00); // Line 5
+	writeLedByte(0x06,0x83,0x06,0x43); // Line 6
+	writeLedByte(0x07,0x01,0x07,0xa5); // Line 7
+	writeLedByte(0x08,0x81,0x08,0xf3); // Line 8
+}
+
 void writeGG()
 {
 	writeLedByte(0x01,0x00,0x01,0x00); // Line 1
@@ -567,6 +553,9 @@ void finish()
 {
 	gameOn = false;
 	writeGG();
+	HAL_Delay(3000);
+	initMainTable();
+	writePlay();
 }
 
 
@@ -694,9 +683,9 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
 
-  HAL_TIM_Base_Start_IT(&htim2);
-  HAL_TIM_Base_Start_IT(&htim3);
-  HAL_TIM_Base_Start_IT(&htim4);
+  HAL_TIM_Base_Start_IT(&htim2); //scoreboard
+  HAL_TIM_Base_Start_IT(&htim3); //muzyka
+  HAL_TIM_Base_Start_IT(&htim4); //kroki gry
 
   HAL_DAC_Start(&hdac,DAC_CHANNEL_1);
 
@@ -705,56 +694,56 @@ int main(void)
   initMainTable();
   gameOn = true;
   placeNew();
-
+  writePlay();
   /* MAKRO DO TESTOW  */
 
-  HAL_Delay(1100);
-  goDown();
-  HAL_Delay(11000);
-  goLeft();
-  HAL_Delay(1000);
-  goLeft();
-  HAL_Delay(10000);
-  rotate();
-  HAL_Delay(900);
-  goLeft();
-  HAL_Delay(8000);
-  goRight();
-  HAL_Delay(1000);
-  goRight();
-  HAL_Delay(1000);
-  goRight();
-  HAL_Delay(1000);
-  goRight();
-  HAL_Delay(9000);
-  rotate();
-  HAL_Delay(9000);
-  rotate();
-  HAL_Delay(1000);
-  goLeft();
-  HAL_Delay(1000);
-  goLeft();
-  HAL_Delay(1000);
-  goLeft();
-  HAL_Delay(1000);
-  goLeft();
-  HAL_Delay(8000);
-  rotate();
-  HAL_Delay(1000);
-  goLeft();
-  HAL_Delay(1000);
-  goLeft();
-  HAL_Delay(1000);
-  goLeft();
-  HAL_Delay(15000);
-  rotate();
-  HAL_Delay(1000);
-  goRight();
-  HAL_Delay(1000);
-  goRight();
-  HAL_Delay(1000);
-  goRight();
-
+//  HAL_Delay(1100);
+//  goDown();
+//  HAL_Delay(11000);
+//  goLeft();
+//  HAL_Delay(1000);
+//  goLeft();
+//  HAL_Delay(10000);
+//  rotate();
+//  HAL_Delay(900);
+//  goLeft();
+//  HAL_Delay(8000);
+//  goRight();
+//  HAL_Delay(1000);
+//  goRight();
+//  HAL_Delay(1000);
+//  goRight();
+//  HAL_Delay(1000);
+//  goRight();
+//  HAL_Delay(9000);
+//  rotate();
+//  HAL_Delay(9000);
+//  rotate();
+//  HAL_Delay(1000);
+//  goLeft();
+//  HAL_Delay(1000);
+//  goLeft();
+//  HAL_Delay(1000);
+//  goLeft();
+//  HAL_Delay(1000);
+//  goLeft();
+//  HAL_Delay(8000);
+//  rotate();
+//  HAL_Delay(1000);
+//  goLeft();
+//  HAL_Delay(1000);
+//  goLeft();
+//  HAL_Delay(1000);
+//  goLeft();
+//  HAL_Delay(15000);
+//  rotate();
+//  HAL_Delay(1000);
+//  goRight();
+//  HAL_Delay(1000);
+//  goRight();
+//  HAL_Delay(1000);
+//  goRight();
+//
 
   /*END OF MACRO*/
 
@@ -766,11 +755,9 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-
   /* USER CODE END WHILE */
-
+	  buttonPressedAction();
   /* USER CODE BEGIN 3 */
-  //buttonPressedAction(); //uncomment with having buttons
   }
   /* USER CODE END 3 */
 
