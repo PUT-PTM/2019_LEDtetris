@@ -54,6 +54,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
+DMA_HandleTypeDef hdma_adc1;
 
 DAC_HandleTypeDef hdac;
 
@@ -65,6 +66,7 @@ TIM_HandleTypeDef htim4;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
+
 // ADC1 --> buttons for sterring
 // DAC  --> music through the speaker
 // SPI1 --> LED matrix
@@ -74,13 +76,18 @@ TIM_HandleTypeDef htim4;
 
 volatile _Bool mainTable[18][10] = { false }; //18 rows, 10 columns
 
+// ---------------------< GAME VARIABLES >-----------------------
 _Bool gameOn = false; // is game paused or not
+_Bool isFinished = false; //if game is finished
 _Bool state = false; //state of pressed button
+
 volatile uint16_t gameScore = 0; //score of game
 
-uint16_t ADCvalue; //value of pressed button
+volatile uint16_t ADCvalue; //value of pressed button
 
 uint8_t scoreDisplayNum = 1; //num of 7-segment display (1,2,3 or 4)
+
+// --------------------< SHAPE PROPERTIES >----------------------
 
 volatile uint8_t currX = 1; //current position of the piece
 volatile uint8_t currY = 5;
@@ -88,11 +95,14 @@ volatile uint8_t currShape = 0; //num of current shape (numbers shown below)
 volatile uint8_t currShapePhase = 0; // which rotation phase
 
 uint8_t stepDownVar; // variable used for going down with shape
-volatile uint8_t stepDownVarMax = STEPDOWNMAX;
+volatile uint8_t stepDownVarMax = STEPDOWNMAX; //value used for steering timer of stepdown function
 
-extern const uint8_t rawData[669362];
-int32_t musicIndex = 0;
 
+// ---------------------------< MUSIC >--------------------------
+extern const uint8_t rawData[669362]; //music data
+int32_t musicIndex = 0; //music data index
+
+// -------------------< SHAPES (shapes.h) >----------------------
 extern _Bool shapeT[4][4][4];
 extern _Bool shapeO[4][4][4];
 extern _Bool shapeI[4][4][4];
@@ -107,6 +117,7 @@ extern _Bool shapeZ[4][4][4];
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
 static void MX_TIM4_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_DAC_Init(void);
@@ -121,12 +132,12 @@ static void MX_TIM2_Init(void);
 
 /* USER CODE BEGIN 0 */
 
-// ---------------< declarations of functions >-----------------
+// -----------------< DECLARATION OF FUNCTIONS >-------------------
 void rotate();
 void goLeft(); //Przesuniecie w lewo
 void goRight(); //Przesuniecie w prawo
 void goDown(); //Zjedz w dol
-void Play_Pause(); //play/pause
+void playPause(); //play/pause
 void stepDown();
 void finish();
 void writeLedMatrix();
@@ -136,7 +147,7 @@ void putShape(_Bool shape[4][4][4], int8_t row, int8_t col, uint8_t position);
 void placeNew();
 
 
-// -------------< Timers, Spi, DAC, ADC functions >--------------
+// --------------< TIMERS, SPI, DAC, ADC functions >---------------
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 
 	if(htim->Instance == TIM2)
@@ -192,18 +203,28 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	}
 }
 
-// ----------------------<Game functions>------------------------
+// ----------------------< GAME FUNCTIONS >------------------------
+void clearTable()
+{
+	for(int i=0; i<17; i++)
+		{
+		for(int j=1;j<9;j++)
+			{
+				mainTable[i][j] = false;
+			}
+		}
+}
+
 void initMainTable()
 {
 	for(int i=0; i<18; i++)
 	{
-		for(int j=1;j<9;j++)
-		{
-			mainTable[i][0] = true;
-			mainTable[i][j] = false;
-			mainTable[i][9] = true;
-			mainTable[17][j] = true;
-		}
+		mainTable[i][0] = true;
+		mainTable[i][9] = true;
+	}
+	for(int j=1;j<10;j++)
+	{
+		mainTable[17][j] = true;
 	}
 }
 
@@ -264,7 +285,8 @@ void writeLedMatrix()
 	}
 }
 
-//Obrot ksztaltu
+// ---------------------< STEERING BUTTONS >------------------------
+//rotate shape
 void rotate()
 {
 	_Bool*** tmpShape;
@@ -290,7 +312,7 @@ void rotate()
 	}
 }
 
-//Przesuniecie w lewo
+//shift left
 void goLeft()
 {
 	_Bool*** tmpShape;
@@ -315,7 +337,7 @@ void goLeft()
 	}
 }
 
-//Przesuniecie w prawo
+//shitf right
 void goRight()
 {
 	_Bool*** tmpShape;
@@ -340,43 +362,19 @@ void goRight()
 	}
 }
 
-//Zjedz w dol
+//go down faster (only one shape, next in normal speed)
 void goDown()
 {
 	stepDownVarMax = 2;
 }
 
 //play/pause
-void Play_Pause()
+void playPause()
 {
 	gameOn ^= 1;
 }
 
-//maybe not use, remove it after prapare new solution
-/*
-void movePiece(int direction)
-{
-	switch(direction)
-	{
-	case 1: goLeft();break;
-	case 2: rotate();break;
-	case 3: goDown();break;
-	case 4: goRight();break;
-	case 5: Play_Pause();break;
-	default:break;
-	}
-}
-*/
-
-// no usage, delete after testing
-_Bool firstRowZero(_Bool shape[4][4][4], uint8_t position)
-{
-	for (int k = 0; k < 4; k++)
-	{
-		if (shape[position][0][k] == true) return false;
-	}
-	return true;
-}
+// ---------------------------< OTHER >-----------------------------
 
 void removeShape(_Bool shape[4][4][4], int8_t row, int8_t col, uint8_t position)
 {
@@ -552,40 +550,40 @@ void writeGG()
 void finish()
 {
 	gameOn = false;
+	isFinished = true;
+	//writePlay();
+	//HAL_Delay(3000);
 	writeGG();
-	HAL_Delay(3000);
-	initMainTable();
-	writePlay();
+
+	//initMainTable();
+
 }
 
+void newGame()
+{
+	isFinished = false;
+	writePlay();
+	clearTable();
+	gameScore = 0;
+	gameOn = true;
+	placeNew();
+}
 
 //Must be in while loop
 void buttonPressedAction()
 {
-	HAL_ADC_Start(&hadc1);
-
-	if (HAL_ADC_PollForConversion(&hadc1, 10) == HAL_OK)
-	{
-		ADCvalue = HAL_ADC_GetValue(&hadc1);
-	}
 
 	if (ADCvalue < 4000)
 	{
 		HAL_Delay(1);
-
-		HAL_ADC_Start(&hadc1);
-
-		if (HAL_ADC_PollForConversion(&hadc1, 10) == HAL_OK)
-		{
-			ADCvalue = HAL_ADC_GetValue(&hadc1);
-		}
 
 		if (ADCvalue < 1500 && ADCvalue > 1300)
 		{
 			if (state == false)
 			{
 				//pressedKey = 5
-				Play_Pause();
+				if(isFinished==false) playPause();
+				else newGame();
 				state = true;
 			}
 		}
@@ -650,6 +648,7 @@ void buttonPressedAction()
   *
   * @retval None
   */
+// ---------------------------< MAIN >--------------------------------
 int main(void)
 {
   /* USER CODE BEGIN 1 */
@@ -674,6 +673,7 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_TIM4_Init();
   MX_TIM3_Init();
   MX_DAC_Init();
@@ -689,61 +689,65 @@ int main(void)
 
   HAL_DAC_Start(&hdac,DAC_CHANNEL_1);
 
+  HAL_ADC_Start_DMA(&hadc1,&ADCvalue,1);
+
   srand((uint8_t)TIM2->ARR);
   initLED();
   initMainTable();
+  //writePlay();
   gameOn = true;
   placeNew();
-  writePlay();
+
   /* MAKRO DO TESTOW  */
 
-//  HAL_Delay(1100);
-//  goDown();
-//  HAL_Delay(11000);
-//  goLeft();
-//  HAL_Delay(1000);
-//  goLeft();
-//  HAL_Delay(10000);
-//  rotate();
-//  HAL_Delay(900);
-//  goLeft();
-//  HAL_Delay(8000);
-//  goRight();
-//  HAL_Delay(1000);
-//  goRight();
-//  HAL_Delay(1000);
-//  goRight();
-//  HAL_Delay(1000);
-//  goRight();
-//  HAL_Delay(9000);
-//  rotate();
-//  HAL_Delay(9000);
-//  rotate();
-//  HAL_Delay(1000);
-//  goLeft();
-//  HAL_Delay(1000);
-//  goLeft();
-//  HAL_Delay(1000);
-//  goLeft();
-//  HAL_Delay(1000);
-//  goLeft();
-//  HAL_Delay(8000);
-//  rotate();
-//  HAL_Delay(1000);
-//  goLeft();
-//  HAL_Delay(1000);
-//  goLeft();
-//  HAL_Delay(1000);
-//  goLeft();
-//  HAL_Delay(15000);
-//  rotate();
-//  HAL_Delay(1000);
-//  goRight();
-//  HAL_Delay(1000);
-//  goRight();
-//  HAL_Delay(1000);
-//  goRight();
-//
+/*
+  HAL_Delay(1100);
+
+  HAL_Delay(11000);
+  goLeft();
+  HAL_Delay(1000);
+  goLeft();
+  HAL_Delay(10000);
+  rotate();
+  HAL_Delay(900);
+  goLeft();
+  HAL_Delay(8000);
+  goRight();
+  HAL_Delay(1000);
+  goRight();
+  HAL_Delay(1000);
+  goRight();
+  HAL_Delay(1000);
+  goRight();
+  HAL_Delay(9000);
+  rotate();
+  HAL_Delay(9000);
+  rotate();
+  HAL_Delay(1000);
+  goLeft();
+  HAL_Delay(1000);
+  goLeft();
+  HAL_Delay(1000);
+  goLeft();
+  HAL_Delay(1000);
+  goLeft();
+  HAL_Delay(8000);
+  rotate();
+  HAL_Delay(1000);
+  goLeft();
+  HAL_Delay(1000);
+  goLeft();
+  HAL_Delay(1000);
+  goLeft();
+  HAL_Delay(15000);
+  rotate();
+  HAL_Delay(1000);
+  goRight();
+  HAL_Delay(1000);
+  goRight();
+  HAL_Delay(1000);
+  goRight();
+*/
 
   /*END OF MACRO*/
 
@@ -756,8 +760,9 @@ int main(void)
   while (1)
   {
   /* USER CODE END WHILE */
-	  buttonPressedAction();
+
   /* USER CODE BEGIN 3 */
+  buttonPressedAction();
   }
   /* USER CODE END 3 */
 
@@ -832,13 +837,13 @@ static void MX_ADC1_Init(void)
   hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
   hadc1.Init.Resolution = ADC_RESOLUTION_12B;
   hadc1.Init.ScanConvMode = DISABLE;
-  hadc1.Init.ContinuousConvMode = DISABLE;
+  hadc1.Init.ContinuousConvMode = ENABLE;
   hadc1.Init.DiscontinuousConvMode = DISABLE;
   hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
   hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
   hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
   hadc1.Init.NbrOfConversion = 1;
-  hadc1.Init.DMAContinuousRequests = DISABLE;
+  hadc1.Init.DMAContinuousRequests = ENABLE;
   hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
   if (HAL_ADC_Init(&hadc1) != HAL_OK)
   {
@@ -999,6 +1004,21 @@ static void MX_TIM4_Init(void)
   {
     _Error_Handler(__FILE__, __LINE__);
   }
+
+}
+
+/** 
+  * Enable DMA controller clock
+  */
+static void MX_DMA_Init(void) 
+{
+  /* DMA controller clock enable */
+  __HAL_RCC_DMA2_CLK_ENABLE();
+
+  /* DMA interrupt init */
+  /* DMA2_Stream0_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
 
 }
 
