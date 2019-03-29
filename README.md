@@ -12,7 +12,7 @@ There is only an application on STM32 (project compiled and run on STM32F407G). 
 3. Analog Test Board with Speaker [Waveshare](https://www.waveshare.com/analog-test-board.htm),
 4. 4x 8-segment module [Botland](https://botland.com.pl/pl/wyswietlacze-segmentowe-i-matryce-led/2896-modul-4-x-wyswietlacz-8-segmentowy-wsp-anoda-2-otwory-montazowe.html?search_query=Modul+4+x+wyswietlacz+8-segmentowy+wsp.+anoda&results=2),
 5. Analog 5-key Keyboard [Keyes](https://keyestudio.com/-p0235.html),
-6. Additional power supply MB102 [Botland](https://botland.com.pl/pl/moduly-zasilajace/1482-modul-zasilajacy-do-plytek-stykowych-mb102-33v-5v.html).
+6. Additional power supply e.g. MB102 [Botland](https://botland.com.pl/pl/moduly-zasilajace/1482-modul-zasilajacy-do-plytek-stykowych-mb102-33v-5v.html).
 
 ## Tools
 ### Software
