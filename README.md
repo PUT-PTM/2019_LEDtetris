@@ -23,6 +23,24 @@ There is only an application on STM32 (project compiled and run on STM32F407G). 
 ## How to run
 Because all external devices need lot of power, it's neccesary to use additional power supply, eg. [MB102 module](https://botland.com.pl/pl/moduly-zasilajace/1482-modul-zasilajacy-do-plytek-stykowych-mb102-33v-5v.html). To run everything, needs two USB type-A cables. 
 Microcontroller and most of additional devices needs 5V. Only 7-segment display and buttons need 3,3V.  
+### Connections to STM32F407G
+##### LED MATRIX
+- PIN 5V
+- PIN PA5 (SCK)
+- PIN PA7 (MOSI)
+- PIN PC5 (CS)
+##### 8-SEGMENT DISPLAY
+- PIN 3.3V
+- PIN PE0, PE1, PE2, PE3, PE4, PE5, PE6 (GPIO_OUT)
+- PIN PB12, PB13, PB14, PB15 (GPIO_OUT)
+##### BUTTONS
+- PIN 3.3V
+- PIN PA1 (ADC_IN)
+- PIN GND
+##### SPEAKER
+- PIN 5V (to speaker)
+- PIN PA4 (DAC_OUT) 
+- PIN GND
 
 ## How to compile
 ## Future improvements
