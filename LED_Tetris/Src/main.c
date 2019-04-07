@@ -77,8 +77,8 @@ TIM_HandleTypeDef htim4;
 volatile _Bool mainTable[18][10] = { false }; //18 rows, 10 columns
 
 // ---------------------< GAME VARIABLES >-----------------------
-_Bool gameOn = false; // is game paused or not
-_Bool isFinished = false; //if game is finished
+volatile _Bool gameOn = false; // is game paused or not
+volatile _Bool isFinished = false; //if game is finished
 _Bool state = false; //state of pressed button
 
 volatile uint16_t gameScore = 0; //score of game
@@ -88,7 +88,6 @@ volatile uint16_t ADCvalue; //value of pressed button
 uint8_t scoreDisplayNum = 1; //num of 7-segment display (1,2,3 or 4)
 
 // --------------------< SHAPE PROPERTIES >----------------------
-
 volatile uint8_t currX = 1; //current position of the piece
 volatile uint8_t currY = 5;
 volatile uint8_t currShape = 0; //num of current shape (numbers shown below)
@@ -110,7 +109,6 @@ extern _Bool shapeL[4][4][4];
 extern _Bool shapeJ[4][4][4];
 extern _Bool shapeS[4][4][4];
 extern _Bool shapeZ[4][4][4];
-
 
 /* USER CODE END PV */
 
@@ -142,6 +140,7 @@ void stepDown();
 void finish();
 void writeLedMatrix();
 _Bool fullRow(uint8_t row);
+_Bool emptyRow(uint8_t row);
 void removeShape(_Bool shape[4][4][4], int8_t row, int8_t col, uint8_t position);
 void putShape(_Bool shape[4][4][4], int8_t row, int8_t col, uint8_t position);
 void placeNew();
@@ -178,14 +177,14 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 
 	if(htim->Instance == TIM3)
 	{
-		/*
-		if(gameOn == true)
-		{
-			HAL_DAC_SetValue(&hdac,DAC_CHANNEL_1,DAC_ALIGN_12B_R,rawData[musicIndex]);
-			musicIndex++;
-			if(musicIndex >= 669361) musicIndex = 0;
-		}
-		*/
+
+		//if(gameOn == true)
+		//{
+		//	HAL_DAC_SetValue(&hdac,DAC_CHANNEL_1,DAC_ALIGN_12B_R,rawData[musicIndex]);
+		//	musicIndex++;
+		//	if(musicIndex >= 669361) musicIndex = 0;
+		//}
+
 	}
 
 	if(htim->Instance == TIM4)
@@ -201,6 +200,15 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 			}
 		}
 	}
+}
+
+void writeLedByte(uint8_t addr1, uint8_t data1, uint8_t addr2, uint8_t data2)
+{
+	uint8_t data[] = {addr1,data1,addr2,data2};
+
+	HAL_GPIO_WritePin(GPIOC,GPIO_PIN_5,GPIO_PIN_RESET);
+	HAL_SPI_Transmit(&hspi1,(uint8_t*)data,4,HAL_MAX_DELAY);
+	HAL_GPIO_WritePin(GPIOC,GPIO_PIN_5,GPIO_PIN_SET);
 }
 
 // ----------------------< GAME FUNCTIONS >------------------------
@@ -243,14 +251,7 @@ uint8_t valueOfColumn(uint8_t col, uint8_t shift) //shift: 8 or 0 (screen 1 or 2
 	return suma;
 }
 
-void writeLedByte(uint8_t addr1, uint8_t data1, uint8_t addr2, uint8_t data2)
-{
-	uint8_t data[] = {addr1,data1,addr2,data2};
 
-	HAL_GPIO_WritePin(GPIOC,GPIO_PIN_5,GPIO_PIN_RESET);
-	HAL_SPI_Transmit(&hspi1,(uint8_t*)data,4,HAL_MAX_DELAY);
-	HAL_GPIO_WritePin(GPIOC,GPIO_PIN_5,GPIO_PIN_SET);
-}
 
 void initLED()
 {
@@ -289,6 +290,7 @@ void writeLedMatrix()
 //rotate shape
 void rotate()
 {
+	if(gameOn == false) return;
 	_Bool*** tmpShape;
 	switch(currShape)
 	{
@@ -315,6 +317,7 @@ void rotate()
 //shift left
 void goLeft()
 {
+	if(gameOn == false) return;
 	_Bool*** tmpShape;
 	switch(currShape)
 	{
@@ -340,6 +343,7 @@ void goLeft()
 //shitf right
 void goRight()
 {
+	if(gameOn == false) return;
 	_Bool*** tmpShape;
 	switch(currShape)
 	{
@@ -365,6 +369,7 @@ void goRight()
 //go down faster (only one shape, next in normal speed)
 void goDown()
 {
+	if(gameOn == false) return;
 	stepDownVarMax = 2;
 }
 
@@ -406,7 +411,7 @@ void putShape(_Bool shape[4][4][4], int8_t row, int8_t col, uint8_t position) //
 
 void placeNew()
 {
-
+	srand((uint8_t)TIM2->CNT);
 	uint8_t shapeNr = rand()%7;
 	currX = 1;
 	currY = 3;
@@ -431,12 +436,12 @@ void placeNew()
 		}break;
 	case 3:
 		{
-			if(ANDMatrix(shapeL,currX,currY,currShapePhase) == false) putShape(shapeL,currX,currY,currShapePhase);
+			if(ANDMatrix(shapeL,--currX,currY,currShapePhase) == false) putShape(shapeL,currX,currY,currShapePhase);
 			else finish();
 		}break;
 	case 4:
 		{
-			if(ANDMatrix(shapeJ,currX,currY,currShapePhase) == false) putShape(shapeJ,currX,currY,currShapePhase);
+			if(ANDMatrix(shapeJ,--currX,currY,currShapePhase) == false) putShape(shapeJ,currX,currY,currShapePhase);
 			else finish();
 		}break;
 	case 5:
@@ -484,8 +489,16 @@ void stepDown()
 					pushDownTable(i);
 				}
 			}
-			if(countLines == 4) countLines+=6;
+			switch(countLines)
+			{
+				case 4: countLines += 5;
+				case 3: countLines += 4;
+				case 2: countLines += 3;
+				case 1: countLines += 2;
+				case 0: break;
+			}
 			gameScore = gameScore + countLines;
+			if(emptyRow(16) == true) gameScore += 50;
 			stepDownVarMax = STEPDOWNMAX;
 			placeNew();
 		}
@@ -511,6 +524,15 @@ _Bool fullRow(uint8_t row)
 	for(uint8_t i = 1; i<9; i++)
 	{
 		if(mainTable[row][i] == 0) return false;
+	}
+	return true;
+}
+
+_Bool emptyRow(uint8_t row)
+{
+	for(uint8_t i = 1; i<9; i++)
+	{
+		if(mainTable[row][i] == 1) return false;
 	}
 	return true;
 }
@@ -551,20 +573,16 @@ void finish()
 {
 	gameOn = false;
 	isFinished = true;
-	//writePlay();
-	//HAL_Delay(3000);
 	writeGG();
-
-	//initMainTable();
-
 }
 
 void newGame()
 {
 	isFinished = false;
-	writePlay();
+	//writePlay();
 	clearTable();
 	gameScore = 0;
+	musicIndex = 0;
 	gameOn = true;
 	placeNew();
 }
@@ -573,7 +591,7 @@ void newGame()
 void buttonPressedAction()
 {
 
-	if (ADCvalue < 4000)
+	if (ADCvalue < 3900)
 	{
 		HAL_Delay(1);
 
@@ -627,19 +645,17 @@ void buttonPressedAction()
 				state = true;
 			}
 		}
-		// Czy ten else pod spodem jest w ogole potrzebny??????????
-		}
-		else
+	}
+	else
+	{
+		if (state == true)
 		{
-			if (state == true)
-			{
-				//pressedKey = 0
-				state = false;
-			}
-			HAL_Delay(1);
+			//pressedKey = 0
+			state = false;
 		}
+		HAL_Delay(1);
+	}
 }
-
 
 /* USER CODE END 0 */
 
@@ -682,25 +698,24 @@ int main(void)
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
 
-
   HAL_TIM_Base_Start_IT(&htim2); //scoreboard
   HAL_TIM_Base_Start_IT(&htim3); //muzyka
   HAL_TIM_Base_Start_IT(&htim4); //kroki gry
 
   HAL_DAC_Start(&hdac,DAC_CHANNEL_1);
 
-  HAL_ADC_Start_DMA(&hadc1,&ADCvalue,1);
+  HAL_ADC_Start_DMA(&hadc1, &ADCvalue, 1);
 
-  srand((uint8_t)TIM2->ARR);
+  srand((uint8_t)TIM2->CNT);
   initLED();
   initMainTable();
-  //writePlay();
-  gameOn = true;
+  writePlay();
+  //gameOn = true;
   placeNew();
 
   /* MAKRO DO TESTOW  */
 
-/*
+  /*
   HAL_Delay(1100);
 
   HAL_Delay(11000);
@@ -747,11 +762,9 @@ int main(void)
   goRight();
   HAL_Delay(1000);
   goRight();
-*/
+	*/
 
   /*END OF MACRO*/
-
-
 
   /* USER CODE END 2 */
 
