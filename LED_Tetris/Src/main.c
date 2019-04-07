@@ -497,8 +497,9 @@ void stepDown()
 				case 1: countLines += 2;
 				case 0: break;
 			}
+			if(stepDownVarMax < STEPDOWNMAX) countLines++;
+			if(emptyRow(16) == true) countLines *= 7;
 			gameScore = gameScore + countLines;
-			if(emptyRow(16) == true) gameScore += 50;
 			stepDownVarMax = STEPDOWNMAX;
 			placeNew();
 		}
