@@ -58,6 +58,8 @@ DMA_HandleTypeDef hdma_adc1;
 
 DAC_HandleTypeDef hdac;
 
+RNG_HandleTypeDef hrng;
+
 SPI_HandleTypeDef hspi1;
 
 TIM_HandleTypeDef htim2;
@@ -122,6 +124,7 @@ static void MX_DAC_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_TIM2_Init(void);
+static void MX_RNG_Init(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
@@ -411,8 +414,10 @@ void putShape(_Bool shape[4][4][4], int8_t row, int8_t col, uint8_t position) //
 
 void placeNew()
 {
-	srand((uint8_t)TIM2->CNT);
-	uint8_t shapeNr = rand()%7;
+	uint32_t num = 0;
+	uint8_t shapeNr = 0;
+	HAL_RNG_GenerateRandomNumber(&hrng,&num);
+	shapeNr = (uint8_t) num % 7;
 	currX = 1;
 	currY = 3;
 	currShape = shapeNr;
@@ -665,7 +670,6 @@ void buttonPressedAction()
   *
   * @retval None
   */
-// ---------------------------< MAIN >--------------------------------
 int main(void)
 {
   /* USER CODE BEGIN 1 */
@@ -697,6 +701,7 @@ int main(void)
   MX_SPI1_Init();
   MX_ADC1_Init();
   MX_TIM2_Init();
+  MX_RNG_Init();
   /* USER CODE BEGIN 2 */
 
   HAL_TIM_Base_Start_IT(&htim2); //scoreboard
@@ -707,7 +712,6 @@ int main(void)
 
   HAL_ADC_Start_DMA(&hadc1, &ADCvalue, 1);
 
-  srand((uint8_t)TIM2->CNT);
   initLED();
   initMainTable();
   writePlay();
@@ -807,7 +811,7 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLM = 4;
   RCC_OscInitStruct.PLL.PLLN = 168;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-  RCC_OscInitStruct.PLL.PLLQ = 4;
+  RCC_OscInitStruct.PLL.PLLQ = 8;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
@@ -895,6 +899,18 @@ static void MX_DAC_Init(void)
   sConfig.DAC_Trigger = DAC_TRIGGER_NONE;
   sConfig.DAC_OutputBuffer = DAC_OUTPUTBUFFER_ENABLE;
   if (HAL_DAC_ConfigChannel(&hdac, &sConfig, DAC_CHANNEL_1) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+}
+
+/* RNG init function */
+static void MX_RNG_Init(void)
+{
+
+  hrng.Instance = RNG;
+  if (HAL_RNG_Init(&hrng) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
   }
