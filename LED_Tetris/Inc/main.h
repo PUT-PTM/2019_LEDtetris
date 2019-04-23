@@ -131,6 +131,27 @@
  */
 
 
+/*	LEVELING
+ *  level 1 < 100   pts
+ *  level 2 < 250   pts
+ *  level 3 < 500   pts
+ *  level 4 < 1000  pts
+ *  level 5 < 2150  pts
+ *  level 6 < 3500  pts
+ *  level 7 < 5000  pts
+ *  level 8 >= 5000 pts
+ */
+
+/*	SCORE CALCULATION
+ *	1 line  $$ +=  2 * level
+ *	2 lines $$ += (2 + 3) * level
+ *  3 lines $$ += (5 + 4) * level
+ *  4 lines $$ += (9 + 5) * level
+ *  empty board 	$$ += 70
+ *	fast 'go down' 	$$ += 1
+ */
+
+
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

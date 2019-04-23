@@ -47,8 +47,7 @@
 
 #define false 0
 #define true 1
-#define STEPDOWNMAX 8
-
+#define MAXLEVEL 8
 
 /* USER CODE END Includes */
 
@@ -76,6 +75,8 @@ TIM_HandleTypeDef htim4;
 // TIM3 --> play music [8000 Hz]
 // TIM4 --> frequency of game [10Hz]
 
+volatile uint8_t STEPDOWNMAX = 8;
+
 volatile _Bool mainTable[18][10] = { false }; //18 rows, 10 columns
 
 // ---------------------< GAME VARIABLES >-----------------------
@@ -84,6 +85,9 @@ volatile _Bool isFinished = false; //if game is finished
 _Bool state = false; //state of pressed button
 
 volatile uint16_t gameScore = 0; //score of game
+volatile uint8_t gameLevel = 1; //game level (score multiplier) & shapes go down faster
+volatile uint16_t levelTable[] = {0,100,250,500,1000,2150,3500,5000,9999,65530};
+
 
 volatile uint16_t ADCvalue; //value of pressed button
 
@@ -103,7 +107,7 @@ volatile uint8_t stepDownVarMax = STEPDOWNMAX; //value used for steering timer o
 extern const uint8_t rawData[669362]; //music data
 int32_t musicIndex = 0; //music data index
 
-// -------------------< SHAPES (shapes.h) >----------------------
+// -------------------< SHAPES (shapes.c) >----------------------
 extern _Bool shapeT[4][4][4];
 extern _Bool shapeO[4][4][4];
 extern _Bool shapeI[4][4][4];
@@ -135,11 +139,11 @@ static void MX_RNG_Init(void);
 
 // -----------------< DECLARATION OF FUNCTIONS >-------------------
 void rotate();
-void goLeft(); //Przesuniecie w lewo
-void goRight(); //Przesuniecie w prawo
-void goDown(); //Zjedz w dol
+void goLeft(); //Shift left
+void goRight(); //Shift right
+void goDown(); //Push shape down fast
 void playPause(); //play/pause
-void stepDown();
+void stepDown(); //Shape down one step
 void finish();
 void writeLedMatrix();
 _Bool fullRow(uint8_t row);
@@ -181,12 +185,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	if(htim->Instance == TIM3)
 	{
 
-		//if(gameOn == true)
-		//{
-		//	HAL_DAC_SetValue(&hdac,DAC_CHANNEL_1,DAC_ALIGN_12B_R,rawData[musicIndex]);
-		//	musicIndex++;
-		//	if(musicIndex >= 669361) musicIndex = 0;
-		//}
+		if(gameOn == true)
+		{
+			HAL_DAC_SetValue(&hdac,DAC_CHANNEL_1,DAC_ALIGN_12B_R,rawData[musicIndex]);
+			musicIndex++;
+			if(musicIndex >= 669361) musicIndex = 0;
+		}
 
 	}
 
@@ -194,7 +198,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	{
 		if(gameOn == true)
 		{
-			writeLedMatrix(); //WAZNE ABY ODKOMENTOWAC PO TESTACH writeGG()
+			writeLedMatrix();
 			++stepDownVar;
 			if(stepDownVar >= stepDownVarMax) //new value 8 !!
 			{
@@ -253,8 +257,6 @@ uint8_t valueOfColumn(uint8_t col, uint8_t shift) //shift: 8 or 0 (screen 1 or 2
 	}
 	return suma;
 }
-
-
 
 void initLED()
 {
@@ -485,6 +487,7 @@ void stepDown()
 		{
 			putShape(tmpShape,currX,currY,currShapePhase);
 			uint8_t countLines = 0;
+			uint8_t newPoints = 0;
 			for(uint8_t i = currX; i < currX + 4; i++)
 			{
 				if(fullRow(i)==true && i < 17)
@@ -496,15 +499,21 @@ void stepDown()
 			}
 			switch(countLines)
 			{
-				case 4: countLines += 5;
-				case 3: countLines += 4;
-				case 2: countLines += 3;
-				case 1: countLines += 2;
+				case 4: newPoints += 5;
+				case 3: newPoints += 4;
+				case 2: newPoints += 3;
+				case 1: newPoints += 2;
 				case 0: break;
 			}
-			if(stepDownVarMax < STEPDOWNMAX) countLines++;
-			if(emptyRow(16) == true) countLines *= 7;
-			gameScore = gameScore + countLines;
+			newPoints *= gameLevel;
+			if(stepDownVarMax < STEPDOWNMAX) newPoints++;
+			if(emptyRow(16) == true) newPoints += 70;
+			gameScore = gameScore + newPoints;
+			if(gameScore >= levelTable[gameLevel])
+				{
+					gameLevel++;
+					if(gameLevel % 2 == 0) STEPDOWNMAX--;
+				}
 			stepDownVarMax = STEPDOWNMAX;
 			placeNew();
 		}
@@ -575,6 +584,8 @@ void writeGG()
 	writeLedByte(0x08,0x00,0x08,0x00); // Line 8
 }
 
+void EaStErEgG(void(*)(void)){}
+
 void finish()
 {
 	gameOn = false;
@@ -585,9 +596,10 @@ void finish()
 void newGame()
 {
 	isFinished = false;
-	//writePlay();
 	clearTable();
 	gameScore = 0;
+	gameLevel = 1;
+	STEPDOWNMAX = 8;
 	musicIndex = 0;
 	gameOn = true;
 	placeNew();
@@ -705,8 +717,8 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   HAL_TIM_Base_Start_IT(&htim2); //scoreboard
-  HAL_TIM_Base_Start_IT(&htim3); //muzyka
-  HAL_TIM_Base_Start_IT(&htim4); //kroki gry
+  HAL_TIM_Base_Start_IT(&htim3); //music
+  HAL_TIM_Base_Start_IT(&htim4); //game play
 
   HAL_DAC_Start(&hdac,DAC_CHANNEL_1);
 
@@ -718,7 +730,7 @@ int main(void)
   //gameOn = true;
   placeNew();
 
-  /* MAKRO DO TESTOW  */
+  /* MAKRO FOR TESTS  */
 
   /*
   HAL_Delay(1100);
@@ -780,7 +792,7 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
-  buttonPressedAction();
+	  buttonPressedAction();
   }
   /* USER CODE END 3 */
 
