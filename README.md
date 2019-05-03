@@ -47,10 +47,10 @@ When AC adapter is not available, it's possible to power up device from computer
 - PIN PA4 (DAC_OUT) 
 - PIN GND
 
-## How to compile
+## How to compile 💻
 Import project to System Workbench and click on 'RUN' button. Everything should be upload to STM32. Microcontroller should be connected to the computer :). 
-## Future improvements 🚧
+## Future improvements ✏️
 Maybe second screen to display next shape. MAYBE !!
-## Addition 📄
+## Addition 📎 💡
 The project was conducted during the Microprocessor Lab course held by the Institute of Control and Information Engineering, Poznan University of Technology.
 Supervisor: Tomasz Mańkowski.
