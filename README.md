@@ -22,7 +22,7 @@ There is only an application on STM32 (project compiled and run on STM32F407G). 
 4. ST-LINKv2 firmware on STM32
 
 ## How to run
-To transfer program to microcontroller needs miniUSB-B cable. To run everything, needs only AC adapter. \n 
+To transfer program to microcontroller needs miniUSB-B cable. To run everything, needs only AC adapter.  
 :exclamation: It's important to upgrade ST-LINK firmware on STM32, because after plugging AC adapter to microcontroller, ST-LINK will reset system continuously, program will never run. 
 Microcontroller and most of additional devices needs 5V. Only 7-segment display and buttons need 3,3V. 
 When AC adapter is not available, it's possible to power up device from computer via USB cable, but it's not preffered. Other option is used powerbank (needs intensity at least 0.5A).
@@ -34,9 +34,9 @@ When AC adapter is not available, it's possible to power up device from computer
 - PIN PC5 (CS)
 ##### 8-SEGMENT DISPLAY
 - PIN 3.3V
-- PIN PE0, PE1, PE2, PE3, PE4, PE5, PE6 (GPIO_OUT) 
+- PIN PE0, PE1, PE2, PE3, PE4, PE5, PE6 (GPIO_OUT)  
        a    b    c    d    e    f    g  (On display)
-- PIN PB12, PB13, PB14, PB15 (GPIO_OUT)
+- PIN PB12, PB13, PB14, PB15 (GPIO_OUT)  
        1     2     3     4   (On display)
 ##### BUTTONS
 - PIN 3.3V
@@ -52,6 +52,5 @@ Import project to System Workbench and click on 'RUN' button. Everything should 
 ## Future improvements 
 Maybe second screen to display next shape. MAYBE !!
 ## Addition 
-
 The project was conducted during the Microprocessor Lab course held by the Institute of Control and Information Engineering, Poznan University of Technology.
 Supervisor: Tomasz Mańkowski.
