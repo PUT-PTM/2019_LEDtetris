@@ -100,7 +100,7 @@ volatile uint8_t currShape = 0; //num of current shape (numbers shown below)
 volatile uint8_t currShapePhase = 0; // which rotation phase
 
 uint8_t stepDownVar; // variable used for going down with shape
-volatile uint8_t stepDownVarMax = STEPDOWNMAX; //value used for steering timer of stepdown function
+volatile uint8_t stepDownVarMax = 8; //value used for steering timer of stepdown function
 
 
 // ---------------------------< MUSIC >--------------------------
@@ -584,7 +584,7 @@ void writeGG()
 	writeLedByte(0x08,0x00,0x08,0x00); // Line 8
 }
 
-void EaStErEgG(void(*)(void)){}
+void EaStErEgG(void(*f)(void)){}
 
 void finish()
 {
