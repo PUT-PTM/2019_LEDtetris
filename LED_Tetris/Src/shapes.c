@@ -5,7 +5,6 @@
  *      Author: Marcin Zlotek
  */
 
-
 //T --> nr 0
  _Bool shapeT[4][4][4] = {
 		{

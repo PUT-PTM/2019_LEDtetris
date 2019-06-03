@@ -130,7 +130,6 @@
  *  +-+-+-+-+-+-+-+-+-+-+
  */
 
-
 /*	LEVELING
  *  level 1 < 100   pts
  *  level 2 < 250   pts
@@ -150,7 +149,6 @@
  *  empty board 	$$ += 70
  *	fast 'go down' 	$$ += 1
  */
-
 
 /* USER CODE END Private defines */
 
