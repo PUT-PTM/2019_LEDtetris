@@ -20,6 +20,7 @@ There is only an application on STM32 (project compiled and run on STM32F407G). 
 2. System Workbench for STM32 (Neon.3 Release v4.6.3)
 3. STMStudio v3.6.0 (for debugging)
 4. ST-LinkUpgrade  
+
 :exclamation: Getting most of this software require registration on producent sites.
 
 ## How to run ⚙️
