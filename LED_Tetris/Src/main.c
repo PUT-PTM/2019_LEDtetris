@@ -187,7 +187,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		{
 			writeLedMatrix();
 			++stepDownVar;
-			if(stepDownVar >= stepDownVarMax) //new value 8 !!
+			if(stepDownVar >= stepDownVarMax)
 			{
 				stepDown();
 				stepDownVar = 0;
@@ -223,7 +223,8 @@ void initMainTable()
 	for(int j=1;j<10;j++) mainTable[17][j] = true;
 }
 
-uint8_t valueOfColumn(uint8_t col, uint8_t shift) //shift: 8 or 0 (screen 1 or 2)
+//shift: 8 or 0 (screen 1 or 2)
+uint8_t valueOfColumn(uint8_t col, uint8_t shift)
 {
 	uint8_t suma = 0x00;
 	int tmp = 0x01;
@@ -244,7 +245,8 @@ void initLED()
 	writeLedByte(0x0f,0x00,0x0f,0x00); // Display text: nothing
 }
 
-_Bool ANDMatrix(_Bool shape[4][4][4], int8_t row, int8_t col,uint8_t position) //return if can change position or rotate shape
+//return if can change position or rotate shape
+_Bool ANDMatrix(_Bool shape[4][4][4], int8_t row, int8_t col,uint8_t position)
 {
 	for(int8_t i = row;i < row + 4; i++)
 	{
@@ -264,7 +266,9 @@ void writeLedMatrix()
 }
 
 // ---------------------< STEERING BUTTONS >------------------------
-void rotate() //rotate shape
+
+//rotate shape
+void rotate()
 {
 	if(gameOn == false) return;
 	_Bool*** tmpShape;
@@ -287,7 +291,8 @@ void rotate() //rotate shape
 	else putShape(tmpShape,currX,currY,currShapePhase);
 }
 
-void goLeft() //shift left
+//shift left
+void goLeft()
 {
 	if(gameOn == false) return;
 	_Bool*** tmpShape;
@@ -306,7 +311,8 @@ void goLeft() //shift left
 	else putShape(tmpShape,currX,currY,currShapePhase);
 }
 
-void goRight() //shift right
+//shift right
+void goRight()
 {
 	if(gameOn == false) return;
 	_Bool*** tmpShape;
@@ -331,7 +337,8 @@ void goRight() //shift right
 	}
 }
 
-void goDown() //go down faster (only one shape, next in normal speed)
+//go down faster (only one shape, next in normal speed)
+void goDown()
 {
 	if(gameOn == false) return;
 	stepDownVarMax = 2;
@@ -356,7 +363,8 @@ void removeShape(_Bool shape[4][4][4], int8_t row, int8_t col, uint8_t position)
 	}
 }
 
-void putShape(_Bool shape[4][4][4], int8_t row, int8_t col, uint8_t position) // row and col means left top corner
+// row and col means left top corner
+void putShape(_Bool shape[4][4][4], int8_t row, int8_t col, uint8_t position)
 {
 	for(int8_t i = row;i < row + 4;i++)
 	{
