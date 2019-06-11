@@ -34,6 +34,7 @@ When AC adapter is not available, it's possible to power up device from computer
 - PIN PA5 (SCK)
 - PIN PA7 (MOSI)
 - PIN PC5 (CS)
+- PIN GND
 ##### 8-SEGMENT DISPLAY
 - PIN 3.3V
 - PIN PE0, PE1, PE2, PE3, PE4, PE5, PE6 (GPIO_OUT)  
