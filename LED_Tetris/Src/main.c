@@ -56,7 +56,6 @@ ADC_HandleTypeDef hadc1;
 DMA_HandleTypeDef hdma_adc1;
 
 DAC_HandleTypeDef hdac;
-
 RNG_HandleTypeDef hrng;
 
 SPI_HandleTypeDef hspi1;
@@ -76,7 +75,6 @@ TIM_HandleTypeDef htim4;
 // TIM4 --> frequency of game [10Hz]
 
 volatile uint8_t STEPDOWNMAX = 8;
-
 volatile _Bool mainTable[18][10] = { false }; //18 rows, 10 columns
 
 // ---------------------< GAME VARIABLES >-----------------------
@@ -88,9 +86,7 @@ volatile uint16_t gameScore = 0; //score of game
 volatile uint8_t gameLevel = 1; //game level (score multiplier) & shapes go down faster
 volatile uint16_t levelTable[] = {0,100,250,500,1000,2150,3500,5000,9999,65530};
 
-
 volatile uint16_t ADCvalue; //value of pressed button
-
 uint8_t scoreDisplayNum = 1; //num of 7-segment display (1,2,3 or 4)
 
 // --------------------< SHAPE PROPERTIES >----------------------
@@ -101,7 +97,6 @@ volatile uint8_t currShapePhase = 0; // which rotation phase
 
 uint8_t stepDownVar; // variable used for going down with shape
 volatile uint8_t stepDownVarMax = 8; //value used for steering timer of stepdown function
-
 
 // ---------------------------< MUSIC >--------------------------
 extern const uint8_t rawData[669362]; //music data
@@ -152,7 +147,6 @@ void removeShape(_Bool shape[4][4][4], int8_t row, int8_t col, uint8_t position)
 void putShape(_Bool shape[4][4][4], int8_t row, int8_t col, uint8_t position);
 void placeNew();
 
-
 // --------------< TIMERS, SPI, DAC, ADC functions >---------------
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 
@@ -181,19 +175,15 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	  };
 		++scoreDisplayNum;
 	}
-
 	if(htim->Instance == TIM3)
 	{
-
 		if(gameOn == true)
 		{
 			HAL_DAC_SetValue(&hdac,DAC_CHANNEL_1,DAC_ALIGN_12B_R,rawData[musicIndex]);
 			musicIndex++;
 			if(musicIndex >= 669361) musicIndex = 0;
 		}
-
 	}
-
 	if(htim->Instance == TIM4)
 	{
 		if(gameOn == true)
@@ -212,7 +202,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 void writeLedByte(uint8_t addr1, uint8_t data1, uint8_t addr2, uint8_t data2)
 {
 	uint8_t data[] = {addr1,data1,addr2,data2};
-
 	HAL_GPIO_WritePin(GPIOC,GPIO_PIN_5,GPIO_PIN_RESET);
 	HAL_SPI_Transmit(&hspi1,(uint8_t*)data,4,HAL_MAX_DELAY);
 	HAL_GPIO_WritePin(GPIOC,GPIO_PIN_5,GPIO_PIN_SET);
@@ -222,12 +211,9 @@ void writeLedByte(uint8_t addr1, uint8_t data1, uint8_t addr2, uint8_t data2)
 void clearTable()
 {
 	for(int i=0; i<17; i++)
-		{
-		for(int j=1;j<9;j++)
-			{
-				mainTable[i][j] = false;
-			}
-		}
+	{
+		for(int j=1;j<9;j++) mainTable[i][j] = false;
+	}
 }
 
 void initMainTable()
@@ -237,10 +223,7 @@ void initMainTable()
 		mainTable[i][0] = true;
 		mainTable[i][9] = true;
 	}
-	for(int j=1;j<10;j++)
-	{
-		mainTable[17][j] = true;
-	}
+	for(int j=1;j<10;j++) mainTable[17][j] = true;
 }
 
 uint8_t valueOfColumn(uint8_t col, uint8_t shift) //shift: 8 or 0 (screen 1 or 2)
@@ -249,10 +232,7 @@ uint8_t valueOfColumn(uint8_t col, uint8_t shift) //shift: 8 or 0 (screen 1 or 2
 	int tmp = 0x01;
 	for(int i=8;i>0;i--)
 	{
-		if(mainTable[i+shift][col] == true)
-		{
-			suma += tmp;
-		}
+		if(mainTable[i+shift][col] == true) suma += tmp;
 		tmp = tmp << 1;
 	}
 	return suma;
@@ -260,13 +240,11 @@ uint8_t valueOfColumn(uint8_t col, uint8_t shift) //shift: 8 or 0 (screen 1 or 2
 
 void initLED()
 {
-
 	writeLedByte(0x09,0x00,0x09,0x00); // no Decode-Mode
 	writeLedByte(0x0a,0x00,0x0a,0x00); // Intensity of light: here 1/4
 	writeLedByte(0x0b,0x07,0x0b,0x07); // Scan-Limit: all digits
 	writeLedByte(0x0c,0x01,0x0c,0x01); // Shutdown: Normal Operation
 	writeLedByte(0x0f,0x00,0x0f,0x00); // Display text: nothing
-
 }
 
 _Bool ANDMatrix(_Bool shape[4][4][4], int8_t row, int8_t col,uint8_t position) //return if can change position or rotate shape
@@ -285,10 +263,7 @@ _Bool ANDMatrix(_Bool shape[4][4][4], int8_t row, int8_t col,uint8_t position) /
 
 void writeLedMatrix()
 {
-	for(int i=1;i<9;i++)
-	{
-		writeLedByte(9-i,valueOfColumn(i,8),9-i,valueOfColumn(i,0));
-	}
+	for(int i=1;i<9;i++) writeLedByte(9-i,valueOfColumn(i,8),9-i,valueOfColumn(i,0));
 }
 
 // ---------------------< STEERING BUTTONS >------------------------
@@ -313,10 +288,7 @@ void rotate()
 		currShapePhase = (currShapePhase + 1) % 4;
 		putShape(tmpShape,currX,currY,currShapePhase);
 	}
-	else
-	{
-		putShape(tmpShape,currX,currY,currShapePhase);
-	}
+	else putShape(tmpShape,currX,currY,currShapePhase);
 }
 
 //shift left
@@ -335,14 +307,8 @@ void goLeft()
 		case 6:tmpShape = shapeZ;break;
 	}
 	removeShape(tmpShape,currX,currY,currShapePhase);
-	if(ANDMatrix(tmpShape,currX,currY-1,currShapePhase) == false)
-	{
-		putShape(tmpShape,currX,--currY,currShapePhase);
-	}
-	else
-	{
-		putShape(tmpShape,currX,currY,currShapePhase);
-	}
+	if(ANDMatrix(tmpShape,currX,currY-1,currShapePhase) == false) putShape(tmpShape,currX,--currY,currShapePhase);
+	else putShape(tmpShape,currX,currY,currShapePhase);
 }
 
 //shitf right
@@ -361,14 +327,8 @@ void goRight()
 		case 6:tmpShape = shapeZ;break;
 	}
 	removeShape(tmpShape,currX,currY,currShapePhase);
-	if(ANDMatrix(tmpShape,currX,currY+1,currShapePhase) == false)
-	{
-		putShape(tmpShape,currX,++currY,currShapePhase);
-	}
-	else
-	{
-		putShape(tmpShape,currX,currY,currShapePhase);
-	}
+	if(ANDMatrix(tmpShape,currX,currY+1,currShapePhase) == false) putShape(tmpShape,currX,++currY,currShapePhase);
+	else putShape(tmpShape,currX,currY,currShapePhase);
 }
 
 //go down faster (only one shape, next in normal speed)
@@ -379,10 +339,7 @@ void goDown()
 }
 
 //play/pause
-void playPause()
-{
-	gameOn ^= 1;
-}
+void playPause() { gameOn ^= 1; }
 
 // ---------------------------< OTHER >-----------------------------
 
@@ -479,10 +436,7 @@ void stepDown()
 		case 6:tmpShape = shapeZ;break;
 		}
 		removeShape(tmpShape,currX,currY,currShapePhase);
-		if(ANDMatrix(tmpShape,currX+1,currY,currShapePhase) == false)
-		{
-			putShape(tmpShape,++currX,currY,currShapePhase);
-		}
+		if(ANDMatrix(tmpShape,currX+1,currY,currShapePhase) == false) putShape(tmpShape,++currX,currY,currShapePhase);
 		else
 		{
 			putShape(tmpShape,currX,currY,currShapePhase);
@@ -523,15 +477,9 @@ void pushDownTable(uint8_t row)
 {
 	for(uint8_t i=row-1;i>1;i--)
 	{
-		for(uint8_t k=0;k<9;k++)
-		{
-			mainTable[i+1][k] = mainTable[i][k];
-		}
+		for(uint8_t k=0;k<9;k++) mainTable[i+1][k] = mainTable[i][k];
 	}
-	for(int i=0;i<9;i++)
-	{
-		mainTable[0][i] = false;
-	}
+	for(int i=0;i<9;i++) mainTable[0][i] = false;
 }
 
 _Bool fullRow(uint8_t row)
@@ -554,10 +502,7 @@ _Bool emptyRow(uint8_t row)
 
 void deleteRow(uint8_t row)
 {
-	for(uint8_t i=1;i<9;i++)
-	{
-		mainTable[row][i] = false;
-	}
+	for(uint8_t i=1;i<9;i++) mainTable[row][i] = false;
 }
 
 void writePlay()
@@ -608,11 +553,9 @@ void newGame()
 //Must be in while loop
 void buttonPressedAction()
 {
-
 	if (ADCvalue < 3900)
 	{
 		HAL_Delay(1);
-
 		if (ADCvalue < 1500 && ADCvalue > 1300)
 		{
 			if (state == false)
@@ -622,7 +565,6 @@ void buttonPressedAction()
 				state = true;
 			}
 		}
-
 		else if (ADCvalue < 750 && ADCvalue >= 600)
 		{
 			if (state == false)
@@ -631,7 +573,6 @@ void buttonPressedAction()
 				state = true;
 			}
 		}
-
 		else if (ADCvalue < 400 && ADCvalue >300)
 		{
 			if (state == false)
@@ -640,7 +581,6 @@ void buttonPressedAction()
 				state = true;
 			}
 		}
-
 		else if (ADCvalue < 200 && ADCvalue > 100)
 		{
 			if (state == false)
@@ -649,7 +589,6 @@ void buttonPressedAction()
 				state = true;
 			}
 		}
-
 		else if (ADCvalue < 50)
 		{
 			if (state == false)
@@ -661,10 +600,7 @@ void buttonPressedAction()
 	}
 	else
 	{
-		if (state == true)
-		{
-			state = false;
-		}
+		if (state == true) state = false;
 		HAL_Delay(1);
 	}
 }
@@ -715,7 +651,6 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim4); //game play
 
   HAL_DAC_Start(&hdac,DAC_CHANNEL_1);
-
   HAL_ADC_Start_DMA(&hadc1, &ADCvalue, 1);
 
   initLED();
